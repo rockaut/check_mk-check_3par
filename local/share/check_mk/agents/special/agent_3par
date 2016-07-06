@@ -233,7 +233,7 @@ def main( argv ):
         sessionKey = get_cred( sessionHost, sessionUser, sessionPassword )
 
         result = {}
-        result[sessionHost] = {}
+        result["sessionHost"] = sessionHost
 
         #print "*****"
         #print "%s: %s with %s / %s" % ( "Host", sessionHost, sessionUser, sessionPassword )
@@ -245,19 +245,19 @@ def main( argv ):
         print "<<<3par>>>"
 
         system = get_system( sessionKey, sessionHost )
-        result[sessionHost]["system"] = system
+        result["system"] = system
 
         hosts = get_hosts( sessionKey, sessionHost )
-        result[sessionHost]["hosts"] = hosts
+        result["hosts"] = hosts
 
         vols = get_volumes( sessionKey, sessionHost )
-        result[sessionHost]["volumes"] = vols
+        result["volumes"] = vols
 
         cpgs = get_cpgs( sessionKey, sessionHost )
-        result[sessionHost]["cpgs"] = cpgs
+        result["cpgs"] = cpgs
 
         ports = get_ports( sessionKey, sessionHost )
-        result[sessionHost]["ports"] = ports
+        result["ports"] = ports
 
         print json.dumps(result, sort_keys=True, indent=4, separators=(',', ': '))
 

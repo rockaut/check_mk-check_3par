@@ -29,32 +29,24 @@ def parse_3par(info):
 ################################################################################
 
 def inventory_3par(parsed):
-    inventory = []
-    for system in parsed:
-        inventory.append( ( system, {} ) )
-
-    return inventory
+    return [ ( "SystemInfos", {} ) ]
 
 def check_3par(item, params, parsed):
     state       = 3
     infotext    = "No item implemented"
 
-    for system in parsed :
-        if system == item:
-            state    = 0                 # TODO: echten State übergeben
-            infotext = ""
+    state    = 0                 # TODO: echten State übergeben
+    infotext = ""
 
-            systemInfos = parsed[system]["system"]
+    systemInfos = parsed["system"]
 
-            infotext = "%s Node %s (SN: %s / V: %s)" % ( systemInfos["totalNodes"], systemInfos["model"], systemInfos["serialNumber"], systemInfos["systemVersion"] )
+    infotext = "%s Node %s (SN: %s / V: %s)" % ( systemInfos["totalNodes"], systemInfos["model"], systemInfos["serialNumber"], systemInfos["systemVersion"] )
 
-            if len(systemInfos["onlineNodes"]) < systemInfos["totalNodes"]:
-                state = 2
-                infotext = "Only %s of %s nodes online!" % ( systemInfos["onlineNodes"], systemInfos["totalNodes"] )
-            else:
-                state = 0
-
-            return ( state, infotext )
+    if len(systemInfos["onlineNodes"]) < systemInfos["totalNodes"]:
+        state = 2
+        infotext = "Only %s of %s nodes online!" % ( systemInfos["onlineNodes"], systemInfos["totalNodes"] )
+    else:
+        state = 0
 
     return ( state, infotext )
 
@@ -72,99 +64,96 @@ check_info["3par"] = {
 # Total Capacity
 ################################################################################
 
+def inventory_3par_systemtotalcap(parsed):
+    return [ ( "SystemTotalCapacity", {} ) ]
+
 def check_3par_systemtotalcap(item, params, parsed):
     state       = 3
     infotext    = "No item implemented"
     perfdata    = []
 
-    for system in parsed :
-        if system == item:
-            state    = 0                 # TODO: echten State übergeben
-            infotext = ""
+    state    = 0                 # TODO: echten State übergeben
+    infotext = ""
 
-            systemInfos = parsed[system]["system"]
+    systemInfos = parsed["system"]
 
-            #print params
-            #{'levels_low': (50.0, 60.0), 'magic_normsize': 20, 'levels': (80.0, 90.0), 'trend_range': 24, 'trend_perfdata': True}
+    #print params
+    #{'levels_low': (50.0, 60.0), 'magic_normsize': 20, 'levels': (80.0, 90.0), 'trend_range': 24, 'trend_perfdata': True}
 
-            allocGB = systemInfos["allocatedCapacityMiB"] / 1024
-            totalGB = systemInfos["totalCapacityMiB"] / 1024
-            perc = allocGB / totalGB * 100
+    allocGB = systemInfos["allocatedCapacityMiB"] / 1024
+    totalGB = systemInfos["totalCapacityMiB"] / 1024
+    perc = allocGB / totalGB * 100
 
-            if perc >= params["levels"][1]:
-                state = 2
-            elif perc >= params["levels"][0]:
-                state = 1
-            elif perc < params["levels"][0]:
-                state = 0
-            else:
-                state = 3
+    if perc >= params["levels"][1]:
+        state = 2
+    elif perc >= params["levels"][0]:
+        state = 1
+    elif perc < params["levels"][0]:
+        state = 0
+    else:
+        state = 3
 
-            infotext = "{:.0f}% used ({:.0f} of {:.0f} GB),(levels at {:.2f}/{:.2f}%)".format( perc, allocGB, totalGB, params["levels"][0], params["levels"][1] )
-            perfdata.append( ( "allocatedCapacityMiB", systemInfos["allocatedCapacityMiB"], params["levels"][0], params["levels"][1], 0, systemInfos["totalCapacityMiB"] ) )
-
-            return ( state, infotext, perfdata )
+    infotext = "{:.0f}% used ({:.0f} of {:.0f} GB),(levels at {:.2f}/{:.2f}%)".format( perc, allocGB, totalGB, params["levels"][0], params["levels"][1] )
+    perfdata.append( ( "allocatedCapacityMiB", systemInfos["allocatedCapacityMiB"], params["levels"][0], params["levels"][1], 0, systemInfos["totalCapacityMiB"] ) )
 
     return ( state, infotext, perfdata )
 
 check_info["3par.SystemTotalCapacity"] = {
+    "group"                   : "filesystem",
     'default_levels_variable':  "filesystem_default_levels",
     'check_function':           check_3par_systemtotalcap,
-    'inventory_function':       inventory_3par,
+    'inventory_function':       inventory_3par_systemtotalcap,
     'parse_function':           parse_3par,
-    'service_description':      'Total Capacity - %s',
+    'service_description':      'Total Capacity',
     "has_perfdata"        :     True,
-    'group':                    'Storage',
 }
 
 
 ################################################################################
 # Total failed capacity
 ################################################################################
+def inventory_3par_systemfailedcap(parsed):
+    return [ ( "SystemFailedCapacity", {} ) ]
 
 def check_3par_systemfailedcap(item, params, parsed):
     state       = 3
     infotext    = "No item implemented"
     perfdata    = []
 
-    for system in parsed :
-        if system == item:
-            state    = 0                 # TODO: echten State übergeben
-            infotext = ""
+    state    = 0                 # TODO: echten State übergeben
+    infotext = ""
 
-            systemInfos = parsed[system]["system"]
+    systemInfos = parsed["system"]
 
-            #print params
-            #{'levels_low': (50.0, 60.0), 'magic_normsize': 20, 'levels': (80.0, 90.0), 'trend_range': 24, 'trend_perfdata': True}
+    #print params
+    #{'levels_low': (50.0, 60.0), 'magic_normsize': 20, 'levels': (80.0, 90.0), 'trend_range': 24, 'trend_perfdata': True}
 
-            failedGB = systemInfos["failedCapacityMiB"] / 1024
-            totalGB = systemInfos["totalCapacityMiB"] / 1024
-            perc = failedGB / totalGB * 100
+    failedGB = systemInfos["failedCapacityMiB"] / 1024
+    totalGB = systemInfos["totalCapacityMiB"] / 1024
+    perc = failedGB / totalGB * 100
 
-            if perc >= params["levels"][1]:
-                state = 2
-            elif perc >= params["levels"][0]:
-                state = 1
-            elif perc < params["levels"][0]:
-                state = 0
-            else:
-                state = 3
+    if perc >= params["levels"][1]:
+        state = 2
+    elif perc >= params["levels"][0]:
+        state = 1
+    elif perc < params["levels"][0]:
+        state = 0
+    else:
+        state = 3
 
-            infotext = "{:.0f}% used ({:.1f} of {:.1f} GB),(levels at {:.2f}/{:.2f}%)".format( perc, failedGB, totalGB, params["levels"][0], params["levels"][1] )
-            perfdata.append( ( "failedCapacityMiB", systemInfos["failedCapacityMiB"], params["levels"][0], params["levels"][1], 0, systemInfos["totalCapacityMiB"] ) )
-
-            return ( state, infotext, perfdata )
+    infotext = "{:.0f}% used ({:.1f} of {:.1f} GB),(levels at {:.2f}/{:.2f}%)".format( perc, failedGB, totalGB, params["levels"][0], params["levels"][1] )
+    perfdata.append( ( "failedCapacityMiB", systemInfos["failedCapacityMiB"], params["levels"][0], params["levels"][1], 0, systemInfos["totalCapacityMiB"] ) )
 
     return ( state, infotext, perfdata )
 
 check_info["3par.SystemFailedCapacity"] = {
-    'default_levels_variable':  "filesystem_default_levels",
+    "group"                   : "filesystem",
+    "default_levels_variable" : "filesystem_default_levels",
     'check_function':           check_3par_systemfailedcap,
-    'inventory_function':       inventory_3par,
+    'inventory_function':       inventory_3par_systemfailedcap,
     'parse_function':           parse_3par,
-    'service_description':      'Total Failed - %s',
+    'service_description':      'Total Failed',
     "has_perfdata"        :     True,
-    'group':                    'Storage',
 }
 
 #################################
@@ -175,10 +164,10 @@ check_info["3par.SystemFailedCapacity"] = {
 
 def inventory_3par_hosts(parsed):
     inventory = []
-    for system in parsed:
-        if "hosts" in parsed[system]:
-            for host in parsed[system]["hosts"]["members"]:
-                inventory.append( ( host["name"], None ) )
+
+    if "hosts" in parsed:
+        for host in parsed["hosts"]["members"]:
+            inventory.append( ( host["name"], None ) )
 
     return inventory
 
@@ -187,17 +176,12 @@ def check_3par_hosts(item, _no_params, parsed):
     infotext    = "No item implemented"
     perfdata    = []
 
-    for system in parsed:
-        if "hosts" in parsed[system]:
-            for host in parsed[system]["hosts"]["members"]:
-                if item == host["name"]:
-                    infotext = "Host: %s" % ( host["name"] )
-
-                    state = 0
-
-                    return ( state, infotext, perfdata )
-
-    return ( state, infotext, perfdata )
+    if "hosts" in parsed:
+        for host in parsed["hosts"]["members"]:
+            if item == host["name"]:
+                infotext = "Host: %s" % ( host["name"] )
+                state = 0
+                return ( state, infotext, perfdata )
 
 check_info["3par.hosts"] = {
     'default_levels_variable':  "threepar_default_levels",
@@ -217,13 +201,12 @@ check_info["3par.hosts"] = {
 
 def inventory_3par_cpg(parsed, params):
     inventory = []
-    for system in parsed:
-        if "cpgs" in parsed[system]:
-            for cpg in parsed[system]["cpgs"]["members"]:
-                totalVVs = ( cpg["numFPVVs"] + cpg["numTDVVs"] + cpg["numTPVVs"] )      # TODO: precompute? store?
-                if filter_ZeroVVCPG and totalVVs <= 0:                                  # TODO: inventory parameters
-                    continue
-                inventory.append( ( cpg["name"], None ) )
+    if "cpgs" in parsed:
+        for cpg in parsed["cpgs"]["members"]:
+            totalVVs = ( cpg["numFPVVs"] + cpg["numTDVVs"] + cpg["numTPVVs"] )      # TODO: precompute? store?
+            if filter_ZeroVVCPG and totalVVs <= 0:                                  # TODO: inventory parameters
+                continue
+            inventory.append( ( cpg["name"], None ) )
 
     return inventory
 
@@ -232,30 +215,27 @@ def check_3par_cpg(item, _no_params, parsed):
     infotext    = "No item implemented"
     perfdata    = []
 
-    for system in parsed:
-        if "cpgs" in parsed[system]:
-            for cpg in parsed[system]["cpgs"]["members"]:
-                if item == cpg["name"]:
-                    totalVVs = ( cpg["numFPVVs"] + cpg["numTDVVs"] + cpg["numTPVVs"] )
+    if "cpgs" in parsed:
+        for cpg in parsed["cpgs"]["members"]:
+            if item == cpg["name"]:
+                totalVVs = ( cpg["numFPVVs"] + cpg["numTDVVs"] + cpg["numTPVVs"] )
 
-                    state = cpg["state"] - 1
+                state = cpg["state"] - 1
 
-                    if cpg["state"] >= 3:
-                        stateWord = "FAILED"
-                    elif cpg["state"] >= 2:
-                        stateWord = "DEGRADED"
-                    elif cpg["state"] == 1:
-                        stateWord = "NORMAL"
-                    else:
-                        stateWord = "UNKNOWN"
+                if cpg["state"] >= 3:
+                    stateWord = "FAILED"
+                elif cpg["state"] >= 2:
+                    stateWord = "DEGRADED"
+                elif cpg["state"] == 1:
+                    stateWord = "NORMAL"
+                else:
+                    stateWord = "UNKNOWN"
 
-                    infotext = "%s - %s VVs" % ( stateWord, totalVVs )
+                infotext = "%s - %s VVs" % ( stateWord, totalVVs )
 
-                    perfdata.append( ( "UsrUsedMiB", cpg["UsrUsage"]["usedMiB"], 0, 0, 0, cpg["UsrUsage"]["totalMiB"] ) )
+                perfdata.append( ( "UsrUsedMiB", cpg["UsrUsage"]["usedMiB"], 0, 0, 0, cpg["UsrUsage"]["totalMiB"] ) )
 
-                    return ( state, infotext, perfdata )
-
-    return ( state, infotext, perfdata )
+                return ( state, infotext, perfdata )
 
 check_info["3par.cpgs"] = {
     'default_levels_variable':  "threepar_default_levels",
@@ -275,13 +255,12 @@ check_info["3par.cpgs"] = {
 
 def inventory_3par_vols(parsed):
     inventory = []
-    for system in parsed:
-        if "volumes" in parsed[system]:
-            for vol in parsed[system]["volumes"]["members"]:
-                if filter_NoSystemVols and vol["policies"]["system"] == True:
-                    continue
+    if "volumes" in parsed:
+        for vol in parsed["volumes"]["members"]:
+            if filter_NoSystemVols and vol["policies"]["system"] == True:
+                continue
 
-                inventory.append( ( vol["name"], None ) )
+            inventory.append( ( vol["name"], None ) )
 
     return inventory
 
@@ -290,30 +269,27 @@ def check_3par_vols(item, _no_params, parsed):
     infotext    = "No item implemented"
     perfdata    = []
 
-    for system in parsed:
-        if "volumes" in parsed[system]:
-            for vol in parsed[system]["volumes"]["members"]:
-                if item == vol["name"]:
-                    state = vol["state"] - 1
+    if "volumes" in parsed:
+        for vol in parsed["volumes"]["members"]:
+            if item == vol["name"]:
+                state = vol["state"] - 1
 
-                    if vol["state"] >= 3:
-                        stateWord = "FAILED"
-                    elif vol["state"] >= 2:
-                        stateWord = "DEGRADED"
-                    elif vol["state"] == 1:
-                        stateWord = "NORMAL"
-                    else:
-                        stateWord = "UNKNOWN"
+                if vol["state"] >= 3:
+                    stateWord = "FAILED"
+                elif vol["state"] >= 2:
+                    stateWord = "DEGRADED"
+                elif vol["state"] == 1:
+                    stateWord = "NORMAL"
+                else:
+                    stateWord = "UNKNOWN"
 
-                    infotext = "%s - ID %s" % ( stateWord, vol["baseId"] )
+                infotext = "%s - ID %s" % ( stateWord, vol["baseId"] )
 
-                    perfdata.append( ( "UsrFreeMiB", vol["userSpace"]["freeMiB"], 0, 0, vol["sizeMiB"] ) )
-                    perfdata.append( ( "UsrUsedMiB", vol["userSpace"]["usedMiB"], 0, 0, vol["sizeMiB"] ) ) # TODO: Warns von "usrSpcAllocLimitPct"
-                    perfdata.append( ( "Compaction", vol["capacityEfficiency"], 0, 0, 0, 100 ) ) # TODO: deduplication
+                perfdata.append( ( "UsrFreeMiB", vol["userSpace"]["freeMiB"], 0, 0, vol["sizeMiB"] ) )
+                perfdata.append( ( "UsrUsedMiB", vol["userSpace"]["usedMiB"], 0, 0, vol["sizeMiB"] ) ) # TODO: Warns von "usrSpcAllocLimitPct"
+                perfdata.append( ( "Compaction", vol["capacityEfficiency"], 0, 0, 0, 100 ) ) # TODO: deduplication
 
-                    return ( state, infotext, perfdata )
-
-    return ( state, infotext, perfdata )
+                return ( state, infotext, perfdata )
 
 check_info["3par.vols"] = {
     'default_levels_variable':  "threepar_default_levels",
@@ -335,79 +311,76 @@ check_info["3par.vols"] = {
 def inventory_3par_ports(parsed):
     inventory = []
 
-    for system in parsed:
-        if "ports" in parsed[system]:
-            for port in parsed[system]["ports"]["members"]:
-                if "label" in port and "portWWN" in port:
-                    inventory.append( ( port["label"] + "-" + port["portWWN"], None ) )
-                elif "label" in port:
-                    inventory.append( ( port["label"], None ) )
-                elif "portWWN" in port:
-                    inventory.append( ( port["portWWN"], None ) )
+    if "ports" in parsed:
+        for port in parsed["ports"]["members"]:
+            if "label" in port and "portWWN" in port:
+                inventory.append( ( port["label"] + "-" + port["portWWN"], None ) )
+            elif "label" in port:
+                inventory.append( ( port["label"], None ) )
+            elif "portWWN" in port:
+                inventory.append( ( port["portWWN"], None ) )
 
     return inventory
 
 def check_3par_ports(item, _no_params, parsed):
+    if "ports" in parsed:
+        for port in parsed["ports"]["members"]:
+            state = -1
+            infotext    = "No item implemented"
+            perfdata    = []
 
-    for system in parsed:
-        if "ports" in parsed[system]:
-            for port in parsed[system]["ports"]["members"]:
-                state = -1
-                infotext    = "No item implemented"
-                perfdata    = []
+            if "protocol" in port:
+                if port["protocol"] == 1:   infotext = "FC"
+                elif port["protocol"] == 2: infotext = "iSCSI"
+                elif port["protocol"] == 3: infotext = "FCOE"
+                elif port["protocol"] == 4: infotext = "IP"
+                elif port["protocol"] == 5: infotext = "SAS"
 
-                if "protocol" in port:
-                    if port["protocol"] == 1:   infotext = "FC"
-                    elif port["protocol"] == 2: infotext = "iSCSI"
-                    elif port["protocol"] == 3: infotext = "FCOE"
-                    elif port["protocol"] == 4: infotext = "IP"
-                    elif port["protocol"] == 5: infotext = "SAS"
+            if "mode" in port:
+                if port["mode"] == 1:   infotext += " / SUSPENDED"
+                elif port["mode"] == 2: infotext += " / TARGET"
+                elif port["mode"] == 3: infotext += " / INITIATOR"
+                elif port["mode"] == 4: infotext += " / PEER"
 
-                if "mode" in port:
-                    if port["mode"] == 1:   infotext += " / SUSPENDED"
-                    elif port["mode"] == 2: infotext += " / TARGET"
-                    elif port["mode"] == 3: infotext += " / INITIATOR"
-                    elif port["mode"] == 4: infotext += " / PEER"
+            if "linkState" in port:
+                if port["linkState"] == 1:      infotext += " - CONFIG_WAIT"; state = max( state, 1 )
+                elif port["linkState"] == 2:    infotext += " - ALPA_WAIT"; state = max( state, 1 )
+                elif port["linkState"] == 3:    infotext += " - LOGIN_WAIT"; state = max( state, 1 )
+                elif port["linkState"] == 4:    infotext += " - READY"; state = max( state, 0 )
+                elif port["linkState"] == 5:    infotext += " - LOSS_SYNC"; state = max( state, 1 )
+                elif port["linkState"] == 6:    infotext += " - ERROR_STATE"; state = max( state, 2 )
+                elif port["linkState"] == 7:    infotext += " - XXX"; state = max( state, 1 )
+                elif port["linkState"] == 8:    infotext += " - NONPARTICIPATE"; state = max( state, 0 )
+                elif port["linkState"] == 9:    infotext += " - COREDUMP"; state = max( state, 1 )
+                elif port["linkState"] == 10:   infotext += " - OFFLINE"; state = max( state, 1 )
+                elif port["linkState"] == 11:   infotext += " - FWDEAD"; state = max( state, 1 )
+                elif port["linkState"] == 12:   infotext += " - IDLE_FOR_RESET"; state = max( state, 1 )
+                elif port["linkState"] == 13:   infotext += " - DHCP_IN_PROGRESS"; state = max( state, 1 )
+                elif port["linkState"] == 14:   infotext += " - PENDING_RESET"; state = max( state, 1 )
 
-                if "linkState" in port:
-                    if port["linkState"] == 1:      infotext += " - CONFIG_WAIT"; state = max( state, 1 )
-                    elif port["linkState"] == 2:    infotext += " - ALPA_WAIT"; state = max( state, 1 )
-                    elif port["linkState"] == 3:    infotext += " - LOGIN_WAIT"; state = max( state, 1 )
-                    elif port["linkState"] == 4:    infotext += " - READY"; state = max( state, 0 )
-                    elif port["linkState"] == 5:    infotext += " - LOSS_SYNC"; state = max( state, 1 )
-                    elif port["linkState"] == 6:    infotext += " - ERROR_STATE"; state = max( state, 2 )
-                    elif port["linkState"] == 7:    infotext += " - XXX"; state = max( state, 1 )
-                    elif port["linkState"] == 8:    infotext += " - NONPARTICIPATE"; state = max( state, 0 )
-                    elif port["linkState"] == 9:    infotext += " - COREDUMP"; state = max( state, 1 )
-                    elif port["linkState"] == 10:   infotext += " - OFFLINE"; state = max( state, 1 )
-                    elif port["linkState"] == 11:   infotext += " - FWDEAD"; state = max( state, 1 )
-                    elif port["linkState"] == 12:   infotext += " - IDLE_FOR_RESET"; state = max( state, 1 )
-                    elif port["linkState"] == 13:   infotext += " - DHCP_IN_PROGRESS"; state = max( state, 1 )
-                    elif port["linkState"] == 14:   infotext += " - PENDING_RESET"; state = max( state, 1 )
+            if "failoverState" in port:
+                if port["failoverState"] == 1:      infotext += ""; state = max( state, 0 )
+                elif port["failoverState"] == 2:    infotext += " - FAILOVER_PENDING"; state = max( state, 2 )
+                elif port["failoverState"] == 3:    infotext += " - FAILED_OVER"; state = max( state, 2 )
+                elif port["failoverState"] == 4:    infotext += " - Failover ACTIVE"; state = max( state, 2 )
+                elif port["failoverState"] == 5:    infotext += " - Failover ACTIVE_DOWN"; state = max( state, 2 )
+                elif port["failoverState"] == 6:    infotext += " - Failover ACTIVE_FAILED"; state = max( state, 2 )
+                elif port["failoverState"] == 7:    infotext += " - FAILBACK_PENDING"; state = max( state, 1 )
 
-                if "failoverState" in port:
-                    if port["failoverState"] == 1:      infotext += ""; state = max( state, 0 )
-                    elif port["failoverState"] == 2:    infotext += " - FAILOVER_PENDING"; state = max( state, 2 )
-                    elif port["failoverState"] == 3:    infotext += " - FAILED_OVER"; state = max( state, 2 )
-                    elif port["failoverState"] == 4:    infotext += " - Failover ACTIVE"; state = max( state, 2 )
-                    elif port["failoverState"] == 5:    infotext += " - Failover ACTIVE_DOWN"; state = max( state, 2 )
-                    elif port["failoverState"] == 6:    infotext += " - Failover ACTIVE_FAILED"; state = max( state, 2 )
-                    elif port["failoverState"] == 7:    infotext += " - FAILBACK_PENDING"; state = max( state, 1 )
+            if state == -1:
+                state = 3
 
-                if state == -1:
-                    state = 3
-
-                if "label" in port:
-                    if "portWWN" in port:
-                        tr = port["label"] + "-" + port["portWWN"]
-                        if item == tr:
-                            return ( state, infotext, perfdata )
-                    else:
-                        if item == port["label"]:
-                            return ( state, infotext, perfdata )
-                elif "portWWN" in port:
-                    if item == port["portWWN"]:
+            if "label" in port:
+                if "portWWN" in port:
+                    tr = port["label"] + "-" + port["portWWN"]
+                    if item == tr:
                         return ( state, infotext, perfdata )
+                else:
+                    if item == port["label"]:
+                        return ( state, infotext, perfdata )
+            elif "portWWN" in port:
+                if item == port["portWWN"]:
+                    return ( state, infotext, perfdata )
 
     if state == -1:
         state = 3
