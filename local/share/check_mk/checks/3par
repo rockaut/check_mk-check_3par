@@ -1,0 +1,318 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+
+import simplejson as json
+
+#
+#
+#
+
+filter_ZeroVVCPG = True
+filter_NoSystemVols = True
+
+#######################################
+#
+#
+#######################################
+
+def parse_3par(info):
+    a = [item for sublist in info for item in sublist]
+    b = ''.join(a)
+    parsed = json.loads(b)
+    return parsed
+
+def inventory_3par(parsed):
+    inventory = []
+    for system in parsed:
+        inventory.append( ( system, None ) )
+
+    return inventory
+
+def check_3par(item, _no_params, parsed):
+    state       = 3
+    infotext    = "No item implemented"
+    perfdata    = []
+
+    for system in parsed :
+        if system == item:
+            state    = 0                 # TODO: echten State übergeben
+            infotext = ""
+
+            systemInfos = parsed[system]["system"]
+
+            infotext = "%s Node %s (SN: %s / V: %s)" % ( systemInfos["totalNodes"], systemInfos["model"], systemInfos["serialNumber"], systemInfos["systemVersion"] )
+
+            perfdata.append( ( "freeCapacityMiB", systemInfos["freeCapacityMiB"], 0, 0, 0, systemInfos["totalCapacityMiB"] ) )
+            perfdata.append( ( "failedCapacityMiB", systemInfos["failedCapacityMiB"] ) )
+            perfdata.append( ( "allocatedCapacityMiB", systemInfos["allocatedCapacityMiB"], 0, 0, 0, systemInfos["totalCapacityMiB"] ) )
+
+            if len(systemInfos["onlineNodes"]) < systemInfos["totalNodes"]:
+                state = 2
+                infotext = "Only %s of %s nodes online!" % ( systemInfos["onlineNodes"], systemInfos["totalNodes"] )
+            else:
+                state = 0
+
+            return ( state, infotext, perfdata )
+
+    return ( state, infotext, perfdata )
+
+check_info["3par"] = {
+    'check_function':           check_3par,
+    'inventory_function':       inventory_3par,
+    'parse_function':           parse_3par,
+    'service_description':      'System Status - %s',
+    "has_perfdata"        :     True,
+    'group':                    'Storage',
+}
+
+#################################
+#
+#
+#
+#################################
+
+def inventory_3par_hosts(parsed):
+    inventory = []
+    for system in parsed:
+        if "hosts" in parsed[system]:
+            for host in parsed[system]["hosts"]["members"]:
+                inventory.append( ( host["name"], None ) )
+
+    return inventory
+
+def check_3par_hosts(item, _no_params, parsed):
+    state       = 3
+    infotext    = "No item implemented"
+    perfdata    = []
+
+    for system in parsed:
+        if "hosts" in parsed[system]:
+            for host in parsed[system]["hosts"]["members"]:
+                if item == host["name"]:
+                    infotext = "Host: %s" % ( host["name"] )
+
+                    state = 0
+
+                    return ( state, infotext, perfdata )
+
+    return ( state, infotext, perfdata )
+
+check_info["3par.hosts"] = {
+    'check_function':           check_3par_hosts,
+    'inventory_function':       inventory_3par_hosts,
+    'parse_function':           parse_3par,
+    'service_description':      'Host Status - %s',
+    "has_perfdata"        :     True,
+    'group':                    'Storage',
+}
+
+#################################
+#
+#
+#
+#################################
+
+def inventory_3par_cpg(parsed):
+    inventory = []
+    for system in parsed:
+        if "cpgs" in parsed[system]:
+            for cpg in parsed[system]["cpgs"]["members"]:
+                totalVVs = ( cpg["numFPVVs"] + cpg["numTDVVs"] + cpg["numTPVVs"] )      # TODO: precompute? store?
+                if filter_ZeroVVCPG and totalVVs <= 0:
+                    continue
+                inventory.append( ( cpg["name"], None ) )
+
+    return inventory
+
+def check_3par_cpg(item, _no_params, parsed):
+    state       = 3
+    infotext    = "No item implemented"
+    perfdata    = []
+
+    for system in parsed:
+        if "cpgs" in parsed[system]:
+            for cpg in parsed[system]["cpgs"]["members"]:
+                if item == cpg["name"]:
+                    totalVVs = ( cpg["numFPVVs"] + cpg["numTDVVs"] + cpg["numTPVVs"] )
+
+                    state = cpg["state"] - 1
+
+                    if cpg["state"] >= 3:
+                        stateWord = "FAILED"
+                    elif cpg["state"] >= 2:
+                        stateWord = "DEGRADED"
+                    elif cpg["state"] == 1:
+                        stateWord = "NORMAL"
+                    else:
+                        stateWord = "UNKNOWN"
+
+                    infotext = "%s - %s VVs" % ( stateWord, totalVVs )
+
+                    perfdata.append( ( "UsrUsedMiB", cpg["UsrUsage"]["usedMiB"], 0, 0, 0, cpg["UsrUsage"]["totalMiB"] ) )
+
+                    return ( state, infotext, perfdata )
+
+    return ( state, infotext, perfdata )
+
+check_info["3par.cpgs"] = {
+    'check_function':           check_3par_cpg,
+    'inventory_function':       inventory_3par_cpg,
+    'parse_function':           parse_3par,
+    'service_description':      'CPG Status - %s',
+    "has_perfdata"        :     True,
+    'group':                    'Storage',
+}
+
+#################################
+#
+#
+#
+#################################
+
+def inventory_3par_vols(parsed):
+    inventory = []
+    for system in parsed:
+        if "volumes" in parsed[system]:
+            for vol in parsed[system]["volumes"]["members"]:
+                if filter_NoSystemVols and vol["policies"]["system"] == True:
+                    continue
+
+                inventory.append( ( vol["name"], None ) )
+
+    return inventory
+
+def check_3par_vols(item, _no_params, parsed):
+    state       = 3
+    infotext    = "No item implemented"
+    perfdata    = []
+
+    for system in parsed:
+        if "volumes" in parsed[system]:
+            for vol in parsed[system]["volumes"]["members"]:
+                if item == vol["name"]:
+                    state = vol["state"] - 1
+
+                    if vol["state"] >= 3:
+                        stateWord = "FAILED"
+                    elif vol["state"] >= 2:
+                        stateWord = "DEGRADED"
+                    elif vol["state"] == 1:
+                        stateWord = "NORMAL"
+                    else:
+                        stateWord = "UNKNOWN"
+
+                    infotext = "%s - ID %s" % ( stateWord, vol["baseId"] )
+
+                    perfdata.append( ( "UsrFreeMiB", vol["userSpace"]["freeMiB"], 0, 0, vol["sizeMiB"] ) )
+                    perfdata.append( ( "UsrUsedMiB", vol["userSpace"]["usedMiB"], 0, 0, vol["sizeMiB"] ) ) # TODO: Warns von "usrSpcAllocLimitPct"
+                    perfdata.append( ( "Compaction", vol["capacityEfficiency"], 0, 0, 0, 100 ) ) # TODO: deduplication
+
+                    return ( state, infotext, perfdata )
+
+    return ( state, infotext, perfdata )
+
+check_info["3par.vols"] = {
+    'check_function':           check_3par_vols,
+    'inventory_function':       inventory_3par_vols,
+    'parse_function':           parse_3par,
+    'service_description':      'Vol Status - %s',
+    "has_perfdata"        :     True,
+    'group':                    'Storage',
+}
+
+
+#################################
+#
+#
+#
+#################################
+
+def inventory_3par_ports(parsed):
+    inventory = []
+
+    for system in parsed:
+        if "ports" in parsed[system]:
+            for port in parsed[system]["ports"]["members"]:
+                if "label" in port and "portWWN" in port:
+                    inventory.append( ( port["label"] + "-" + port["portWWN"], None ) )
+                elif "label" in port:
+                    inventory.append( ( port["label"], None ) )
+                elif "portWWN" in port:
+                    inventory.append( ( port["portWWN"], None ) )
+
+    return inventory
+
+def check_3par_ports(item, _no_params, parsed):
+
+    for system in parsed:
+        if "ports" in parsed[system]:
+            for port in parsed[system]["ports"]["members"]:
+                state = -1
+                infotext    = "No item implemented"
+                perfdata    = []
+
+                if "protocol" in port:
+                    if port["protocol"] == 1:   infotext = "FC"
+                    elif port["protocol"] == 2: infotext = "iSCSI"
+                    elif port["protocol"] == 3: infotext = "FCOE"
+                    elif port["protocol"] == 4: infotext = "IP"
+                    elif port["protocol"] == 5: infotext = "SAS"
+
+                if "mode" in port:
+                    if port["mode"] == 1:   infotext += " / SUSPENDED"
+                    elif port["mode"] == 2: infotext += " / TARGET"
+                    elif port["mode"] == 3: infotext += " / INITIATOR"
+                    elif port["mode"] == 4: infotext += " / PEER"
+
+                if "linkState" in port:
+                    if port["linkState"] == 1:      infotext += " - CONFIG_WAIT"; state = max( state, 1 )
+                    elif port["linkState"] == 2:    infotext += " - ALPA_WAIT"; state = max( state, 1 )
+                    elif port["linkState"] == 3:    infotext += " - LOGIN_WAIT"; state = max( state, 1 )
+                    elif port["linkState"] == 4:    infotext += " - READY"; state = max( state, 0 )
+                    elif port["linkState"] == 5:    infotext += " - LOSS_SYNC"; state = max( state, 1 )
+                    elif port["linkState"] == 6:    infotext += " - ERROR_STATE"; state = max( state, 2 )
+                    elif port["linkState"] == 7:    infotext += " - XXX"; state = max( state, 1 )
+                    elif port["linkState"] == 8:    infotext += " - NONPARTICIPATE"; state = max( state, 0 )
+                    elif port["linkState"] == 9:    infotext += " - COREDUMP"; state = max( state, 1 )
+                    elif port["linkState"] == 10:   infotext += " - OFFLINE"; state = max( state, 1 )
+                    elif port["linkState"] == 11:   infotext += " - FWDEAD"; state = max( state, 1 )
+                    elif port["linkState"] == 12:   infotext += " - IDLE_FOR_RESET"; state = max( state, 1 )
+                    elif port["linkState"] == 13:   infotext += " - DHCP_IN_PROGRESS"; state = max( state, 1 )
+                    elif port["linkState"] == 14:   infotext += " - PENDING_RESET"; state = max( state, 1 )
+
+                if "failoverState" in port:
+                    if port["failoverState"] == 1:      infotext += ""; state = max( state, 0 )
+                    elif port["failoverState"] == 2:    infotext += " - FAILOVER_PENDING"; state = max( state, 2 )
+                    elif port["failoverState"] == 3:    infotext += " - FAILED_OVER"; state = max( state, 2 )
+                    elif port["failoverState"] == 4:    infotext += " - Failover ACTIVE"; state = max( state, 2 )
+                    elif port["failoverState"] == 5:    infotext += " - Failover ACTIVE_DOWN"; state = max( state, 2 )
+                    elif port["failoverState"] == 6:    infotext += " - Failover ACTIVE_FAILED"; state = max( state, 2 )
+                    elif port["failoverState"] == 7:    infotext += " - FAILBACK_PENDING"; state = max( state, 1 )
+
+                if state == -1:
+                    state = 3
+
+                if "label" in port:
+                    if "portWWN" in port:
+                        tr = port["label"] + "-" + port["portWWN"]
+                        if item == tr:
+                            return ( state, infotext, perfdata )
+                    else:
+                        if item == port["label"]:
+                            return ( state, infotext, perfdata )
+                elif "portWWN" in port:
+                    if item == port["portWWN"]:
+                        return ( state, infotext, perfdata )
+
+    if state == -1:
+        state = 3
+    return ( state, infotext, perfdata )
+
+check_info["3par.ports"] = {
+    'check_function':           check_3par_ports,
+    'inventory_function':       inventory_3par_ports,
+    'parse_function':           parse_3par,
+    'service_description':      'Port Status - %s',
+    "has_perfdata"        :     True,
+    'group':                    'Storage',
+}
