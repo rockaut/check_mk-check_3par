@@ -3,17 +3,20 @@
 
 import simplejson as json
 
-#
-#
-#
+################################################################################
+# variable definivtions
+################################################################################
 
 filter_ZeroVVCPG = True
 filter_NoSystemVols = True
 
-#######################################
+threepar_default_levels = {}
+
+factory_settings["threepar_default_levels"] = {}
+
+################################################################################
 #
-#
-#######################################
+################################################################################
 
 def parse_3par(info):
     a = [item for sublist in info for item in sublist]
@@ -21,14 +24,55 @@ def parse_3par(info):
     parsed = json.loads(b)
     return parsed
 
+################################################################################
+#
+################################################################################
+
 def inventory_3par(parsed):
     inventory = []
     for system in parsed:
-        inventory.append( ( system, None ) )
+        inventory.append( ( system, {} ) )
 
     return inventory
 
-def check_3par(item, _no_params, parsed):
+def check_3par(item, params, parsed):
+    state       = 3
+    infotext    = "No item implemented"
+
+    for system in parsed :
+        if system == item:
+            state    = 0                 # TODO: echten State übergeben
+            infotext = ""
+
+            systemInfos = parsed[system]["system"]
+
+            infotext = "%s Node %s (SN: %s / V: %s)" % ( systemInfos["totalNodes"], systemInfos["model"], systemInfos["serialNumber"], systemInfos["systemVersion"] )
+
+            if len(systemInfos["onlineNodes"]) < systemInfos["totalNodes"]:
+                state = 2
+                infotext = "Only %s of %s nodes online!" % ( systemInfos["onlineNodes"], systemInfos["totalNodes"] )
+            else:
+                state = 0
+
+            return ( state, infotext )
+
+    return ( state, infotext )
+
+check_info["3par"] = {
+    'default_levels_variable':  "threepar_default_levels",
+    'check_function':           check_3par,
+    'inventory_function':       inventory_3par,
+    'parse_function':           parse_3par,
+    'service_description':      'System Status - %s',
+    "has_perfdata"        :     False,
+    'group':                    'Storage',
+}
+
+################################################################################
+# Total Capacity
+################################################################################
+
+def check_3par_systemtotalcap(item, params, parsed):
     state       = 3
     infotext    = "No item implemented"
     perfdata    = []
@@ -40,27 +84,85 @@ def check_3par(item, _no_params, parsed):
 
             systemInfos = parsed[system]["system"]
 
-            infotext = "%s Node %s (SN: %s / V: %s)" % ( systemInfos["totalNodes"], systemInfos["model"], systemInfos["serialNumber"], systemInfos["systemVersion"] )
+            #print params
+            #{'levels_low': (50.0, 60.0), 'magic_normsize': 20, 'levels': (80.0, 90.0), 'trend_range': 24, 'trend_perfdata': True}
 
-            perfdata.append( ( "freeCapacityMiB", systemInfos["freeCapacityMiB"], 0, 0, 0, systemInfos["totalCapacityMiB"] ) )
-            perfdata.append( ( "failedCapacityMiB", systemInfos["failedCapacityMiB"] ) )
-            perfdata.append( ( "allocatedCapacityMiB", systemInfos["allocatedCapacityMiB"], 0, 0, 0, systemInfos["totalCapacityMiB"] ) )
+            allocGB = systemInfos["allocatedCapacityMiB"] / 1024
+            totalGB = systemInfos["totalCapacityMiB"] / 1024
+            perc = allocGB / totalGB * 100
 
-            if len(systemInfos["onlineNodes"]) < systemInfos["totalNodes"]:
+            if perc >= params["levels"][1]:
                 state = 2
-                infotext = "Only %s of %s nodes online!" % ( systemInfos["onlineNodes"], systemInfos["totalNodes"] )
-            else:
+            elif perc >= params["levels"][0]:
+                state = 1
+            elif perc < params["levels"][0]:
                 state = 0
+            else:
+                state = 3
+
+            infotext = "{:.0f}% used ({:.0f} of {:.0f} GB),(levels at {:.2f}/{:.2f}%)".format( perc, allocGB, totalGB, params["levels"][0], params["levels"][1] )
+            perfdata.append( ( "allocatedCapacityMiB", systemInfos["allocatedCapacityMiB"], params["levels"][0], params["levels"][1], 0, systemInfos["totalCapacityMiB"] ) )
 
             return ( state, infotext, perfdata )
 
     return ( state, infotext, perfdata )
 
-check_info["3par"] = {
-    'check_function':           check_3par,
+check_info["3par.SystemTotalCapacity"] = {
+    'default_levels_variable':  "filesystem_default_levels",
+    'check_function':           check_3par_systemtotalcap,
     'inventory_function':       inventory_3par,
     'parse_function':           parse_3par,
-    'service_description':      'System Status - %s',
+    'service_description':      'Total Capacity - %s',
+    "has_perfdata"        :     True,
+    'group':                    'Storage',
+}
+
+
+################################################################################
+# Total failed capacity
+################################################################################
+
+def check_3par_systemfailedcap(item, params, parsed):
+    state       = 3
+    infotext    = "No item implemented"
+    perfdata    = []
+
+    for system in parsed :
+        if system == item:
+            state    = 0                 # TODO: echten State übergeben
+            infotext = ""
+
+            systemInfos = parsed[system]["system"]
+
+            #print params
+            #{'levels_low': (50.0, 60.0), 'magic_normsize': 20, 'levels': (80.0, 90.0), 'trend_range': 24, 'trend_perfdata': True}
+
+            failedGB = systemInfos["failedCapacityMiB"] / 1024
+            totalGB = systemInfos["totalCapacityMiB"] / 1024
+            perc = failedGB / totalGB * 100
+
+            if perc >= params["levels"][1]:
+                state = 2
+            elif perc >= params["levels"][0]:
+                state = 1
+            elif perc < params["levels"][0]:
+                state = 0
+            else:
+                state = 3
+
+            infotext = "{:.0f}% used ({:.1f} of {:.1f} GB),(levels at {:.2f}/{:.2f}%)".format( perc, failedGB, totalGB, params["levels"][0], params["levels"][1] )
+            perfdata.append( ( "failedCapacityMiB", systemInfos["failedCapacityMiB"], params["levels"][0], params["levels"][1], 0, systemInfos["totalCapacityMiB"] ) )
+
+            return ( state, infotext, perfdata )
+
+    return ( state, infotext, perfdata )
+
+check_info["3par.SystemFailedCapacity"] = {
+    'default_levels_variable':  "filesystem_default_levels",
+    'check_function':           check_3par_systemfailedcap,
+    'inventory_function':       inventory_3par,
+    'parse_function':           parse_3par,
+    'service_description':      'Total Failed - %s',
     "has_perfdata"        :     True,
     'group':                    'Storage',
 }
@@ -98,6 +200,7 @@ def check_3par_hosts(item, _no_params, parsed):
     return ( state, infotext, perfdata )
 
 check_info["3par.hosts"] = {
+    'default_levels_variable':  "threepar_default_levels",
     'check_function':           check_3par_hosts,
     'inventory_function':       inventory_3par_hosts,
     'parse_function':           parse_3par,
@@ -112,13 +215,13 @@ check_info["3par.hosts"] = {
 #
 #################################
 
-def inventory_3par_cpg(parsed):
+def inventory_3par_cpg(parsed, params):
     inventory = []
     for system in parsed:
         if "cpgs" in parsed[system]:
             for cpg in parsed[system]["cpgs"]["members"]:
                 totalVVs = ( cpg["numFPVVs"] + cpg["numTDVVs"] + cpg["numTPVVs"] )      # TODO: precompute? store?
-                if filter_ZeroVVCPG and totalVVs <= 0:
+                if filter_ZeroVVCPG and totalVVs <= 0:                                  # TODO: inventory parameters
                     continue
                 inventory.append( ( cpg["name"], None ) )
 
@@ -155,6 +258,7 @@ def check_3par_cpg(item, _no_params, parsed):
     return ( state, infotext, perfdata )
 
 check_info["3par.cpgs"] = {
+    'default_levels_variable':  "threepar_default_levels",
     'check_function':           check_3par_cpg,
     'inventory_function':       inventory_3par_cpg,
     'parse_function':           parse_3par,
@@ -212,6 +316,7 @@ def check_3par_vols(item, _no_params, parsed):
     return ( state, infotext, perfdata )
 
 check_info["3par.vols"] = {
+    'default_levels_variable':  "threepar_default_levels",
     'check_function':           check_3par_vols,
     'inventory_function':       inventory_3par_vols,
     'parse_function':           parse_3par,
@@ -309,6 +414,7 @@ def check_3par_ports(item, _no_params, parsed):
     return ( state, infotext, perfdata )
 
 check_info["3par.ports"] = {
+    'default_levels_variable':  "threepar_default_levels",
     'check_function':           check_3par_ports,
     'inventory_function':       inventory_3par_ports,
     'parse_function':           parse_3par,
