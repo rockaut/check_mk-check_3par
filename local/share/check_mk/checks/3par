@@ -4,15 +4,22 @@
 import simplejson as json
 
 ################################################################################
-# variable definivtions
+# variable definitions
 ################################################################################
 
 filter_ZeroVVCPG = True
 filter_NoSystemVols = True
 
 threepar_default_levels = {}
+threepar_cpgs_default_levels = {}
 
 factory_settings["threepar_default_levels"] = {}
+
+factory_settings["threepar_cpgs_default_levels"] = {
+    "cpgstatus_warning"  : "2",
+    "cpgstatus_critical" : "3",
+    "levels" : ( 80.0, 90.0 ),
+}
 
 ################################################################################
 #
@@ -77,12 +84,9 @@ def check_3par_systemtotalcap(item, params, parsed):
 
     systemInfos = parsed["system"]
 
-    #print params
-    #{'levels_low': (50.0, 60.0), 'magic_normsize': 20, 'levels': (80.0, 90.0), 'trend_range': 24, 'trend_perfdata': True}
-
-    allocGB = systemInfos["allocatedCapacityMiB"] / 1024
-    totalGB = systemInfos["totalCapacityMiB"] / 1024
-    perc = allocGB / totalGB * 100
+    allocGB = systemInfos["allocatedCapacityMiB"] / 1024.0
+    totalGB = systemInfos["totalCapacityMiB"] / 1024.0
+    perc = allocGB / totalGB * 100.0
 
     if perc >= params["levels"][1]:
         state = 2
@@ -125,12 +129,9 @@ def check_3par_systemfailedcap(item, params, parsed):
 
     systemInfos = parsed["system"]
 
-    #print params
-    #{'levels_low': (50.0, 60.0), 'magic_normsize': 20, 'levels': (80.0, 90.0), 'trend_range': 24, 'trend_perfdata': True}
-
-    failedGB = systemInfos["failedCapacityMiB"] / 1024
-    totalGB = systemInfos["totalCapacityMiB"] / 1024
-    perc = failedGB / totalGB * 100
+    failedGB = systemInfos["failedCapacityMiB"] / 1024.0
+    totalGB = systemInfos["totalCapacityMiB"] / 1024.0
+    perc = failedGB / totalGB * 100.0
 
     if perc >= params["levels"][1]:
         state = 2
@@ -165,9 +166,11 @@ check_info["3par.SystemFailedCapacity"] = {
 def inventory_3par_hosts(parsed):
     inventory = []
 
-    if "hosts" in parsed:
-        for host in parsed["hosts"]["members"]:
-            inventory.append( ( host["name"], None ) )
+    if "hosts" not in parsed:
+        return inventory
+
+    for host in parsed["hosts"]["members"]:
+        inventory.append( ( host["name"], None ) )
 
     return inventory
 
@@ -176,12 +179,14 @@ def check_3par_hosts(item, _no_params, parsed):
     infotext    = "No item implemented"
     perfdata    = []
 
-    if "hosts" in parsed:
-        for host in parsed["hosts"]["members"]:
-            if item == host["name"]:
-                infotext = "Host: %s" % ( host["name"] )
-                state = 0
-                return ( state, infotext, perfdata )
+    if "hosts" not in parsed:
+        return ( state, infotext, perfdata )
+
+    for host in parsed["hosts"]["members"]:
+        if item == host["name"]:
+            infotext = "Host: %s" % ( host["name"] )
+            state = 0
+            return ( state, infotext, perfdata )
 
 check_info["3par.hosts"] = {
     'default_levels_variable':  "threepar_default_levels",
@@ -194,57 +199,114 @@ check_info["3par.hosts"] = {
 }
 
 #################################
-#
-#
-#
+# CPGs
 #################################
 
-def inventory_3par_cpg(parsed, params):
+def inventory_3par_cpgs(parsed):
     inventory = []
-    if "cpgs" in parsed:
-        for cpg in parsed["cpgs"]["members"]:
-            totalVVs = ( cpg["numFPVVs"] + cpg["numTDVVs"] + cpg["numTPVVs"] )      # TODO: precompute? store?
-            if filter_ZeroVVCPG and totalVVs <= 0:                                  # TODO: inventory parameters
-                continue
-            inventory.append( ( cpg["name"], None ) )
+
+    if "cpgs" not in parsed:
+        return inventory
+
+    for cpg in parsed["cpgs"]["members"]:
+        totalVVs = ( cpg["numFPVVs"] + cpg["numTDVVs"] + cpg["numTPVVs"] )      # TODO: precompute? store?
+        if filter_ZeroVVCPG and totalVVs <= 0:                                  # TODO: inventory parameters
+            continue
+        inventory.append( ( cpg["name"], {} ) )
 
     return inventory
 
-def check_3par_cpg(item, _no_params, parsed):
+def check_3par_cpgs(item, params, parsed):
     state       = 3
     infotext    = "No item implemented"
     perfdata    = []
 
-    if "cpgs" in parsed:
-        for cpg in parsed["cpgs"]["members"]:
-            if item == cpg["name"]:
-                totalVVs = ( cpg["numFPVVs"] + cpg["numTDVVs"] + cpg["numTPVVs"] )
+    if "cpgs" not in parsed:
+        return ( state, infotext, perfdata )
 
-                state = cpg["state"] - 1
+    for cpg in parsed["cpgs"]["members"]:
+        if item == cpg["name"]:
+            totalVVs = ( cpg["numFPVVs"] + cpg["numTDVVs"] + cpg["numTPVVs"] )
 
-                if cpg["state"] >= 3:
-                    stateWord = "FAILED"
-                elif cpg["state"] >= 2:
-                    stateWord = "DEGRADED"
-                elif cpg["state"] == 1:
-                    stateWord = "NORMAL"
+            used_mb = cpg["UsrUsage"]["usedMiB"]
+            size_mb = cpg["UsrUsage"]["totalMiB"]
+            used_perc = 100.0 * (float(used_mb) / size_mb)
+            size_gb   = size_mb / 1024.0
+            used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
+            size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
+            cstate = cpg["state"] - 1
+
+            # If both numbers end with both MB or GB or TB, then drop the first one
+            if used_hr[-2:] == size_hr[-2:]:
+                used_hr = used_hr[:-3]
+
+            levels = get_filesystem_levels("bla", "cpg", size_gb, params)
+            warn_mb, crit_mb       = levels["levels_mb"]
+
+            if warn_mb <= -1:
+                #Negativ levels, so calculate mb left
+                rest_mb = size_mb - used_mb
+                crit_mb = crit_mb * -1
+                warn_mb = warn_mb * -1
+                if rest_mb <= crit_mb:
+                    state = 2
+                elif rest_mb <= warn_mb:
+                    state = max(1, state)
                 else:
-                    stateWord = "UNKNOWN"
+                    state = 0
+            else:
+                if used_mb >= crit_mb:
+                    state = 2
+                elif used_mb >= warn_mb:
+                    state = max(1, state)
+                else:
+                    state = 0
 
-                infotext = "%s - %s VVs" % ( stateWord, totalVVs )
+            if cstate >= levels["cpgstatus_critical"]:
+                state = max(2, state)
+            elif cstate >= levels["cpgstatus_warning"]:
+                state = max(1, state)
+            else:
+                state = max(0, state)
 
-                perfdata.append( ( "UsrUsedMiB", cpg["UsrUsage"]["usedMiB"], 0, 0, 0, cpg["UsrUsage"]["totalMiB"] ) )
+            if cpg["state"] >= 3:
+                stateWord = "FAILED"
+            elif cpg["state"] >= 2:
+                stateWord = "DEGRADED"
+            elif cpg["state"] == 1:
+                stateWord = "NORMAL"
+            else:
+                stateWord = "UNKNOWN"
 
-                return ( state, infotext, perfdata )
+            infotext = "%s - %s VVs" % ( stateWord, totalVVs )
+
+            # Show enough decimal digits so that very small percentages are still
+            # visible!
+            if used_perc > 0:
+                perc_precision = max(1, 2 - int(round(math.log(used_perc, 10))))
+            else:
+                perc_precision = 1
+            infotext += " - %%.%df%%%% used (%%s of %%s), %%s" % perc_precision % (used_perc, used_hr, size_hr, levels["levels_text"])
+
+            #{'levels': (8888888, 9999999), 'cpgstatus_critical': '3', 'cpgstatus_warning': '2'}
+            #{'trend_range': 24, 'levels_text': '(levels at 8.48 TB/9.54 TB)', 'cpgstatus_warning': '2', 'inodes_levels': (None, None), 'levels_mb': (8888888.0, 9999999.0), 'magic_normsize': 20, 'levels': (8888888, 9999999), 'cpgstatus_critical': '3', 'levels_low': (50.0, 60.0), 'trend_perfdata': True}
+
+            #{'levels': (22.0, 33.0), 'cpgstatus_critical': '3', 'cpgstatus_warning': '2'}
+            #{'trend_range': 24, 'levels_text': '(levels at 22.00/33.00%)', 'cpgstatus_warning': '2', 'inodes_levels': (None, None), 'levels_mb': (11266252.8, 16899379.2), 'magic_normsize': 20, 'levels': (22.0, 33.0), 'cpgstatus_critical': '3', 'levels_low': (50.0, 60.0), 'trend_perfdata': True}
+
+            perfdata.append( ( "UsrUsedMiB", cpg["UsrUsage"]["usedMiB"], warn_mb, crit_mb, 0, cpg["UsrUsage"]["totalMiB"] ) )
+
+            return ( state, infotext, perfdata )
 
 check_info["3par.cpgs"] = {
-    'default_levels_variable':  "threepar_default_levels",
-    'check_function':           check_3par_cpg,
-    'inventory_function':       inventory_3par_cpg,
+    'group': '3par_cpgs',
+    'default_levels_variable':  "threepar_cpgs_default_levels",
+    'check_function':           check_3par_cpgs,
+    'inventory_function':       inventory_3par_cpgs,
     'parse_function':           parse_3par,
     'service_description':      'CPG Status - %s',
     "has_perfdata"        :     True,
-    'group':                    'Storage',
+    "includes"                : [ "df.include" ],
 }
 
 #################################
