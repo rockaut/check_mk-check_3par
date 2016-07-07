@@ -88,3 +88,4 @@ ENV/
 .ropeproject
 test.txt
 *.mkp
+test.json

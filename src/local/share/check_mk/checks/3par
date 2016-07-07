@@ -4,7 +4,13 @@
 import simplejson as json
 
 ################################################################################
-# variable definitions
+# __      __        _       _     _      
+# \ \    / /       (_)     | |   | |     
+#  \ \  / /_ _ _ __ _  __ _| |__ | | ___ 
+#   \ \/ / _` | '__| |/ _` | '_ \| |/ _ \
+#    \  / (_| | |  | | (_| | |_) | |  __/
+#     \/ \__,_|_|  |_|\__,_|_.__/|_|\___|
+#                                        
 ################################################################################
 
 filter_ZeroVVCPG = True
@@ -18,6 +24,14 @@ factory_settings["threepar_cpgs_default_levels"] = {
     "cpgstatus_warning"  : 2,
     "cpgstatus_critical" : 3,
     "levels" : ( 80.0, 90.0 ),
+}
+
+threepar_volumes_default_levels = {}
+factory_settings["threepar_volumes_default_levels"] = {
+    "volstatus_warning"  : 2,
+    "volstatus_critical" : 3,
+    "levels" : ( 80.0, 90.0 ),
+    "compaction_grade" : ( 0.5, 0.2 ),
 }
 
 threepar_ports_default_levels = {}
@@ -46,6 +60,12 @@ factory_settings["threepar_ports_default_levels"] = {
 }
 
 ################################################################################
+#   _____                                      
+#  / ____|                                     
+# | |     ___  _ __ ___  _ __ ___   ___  _ __  
+# | |    / _ \| '_ ` _ \| '_ ` _ \ / _ \| '_ \ 
+# | |___| (_) | | | | | | | | | | | (_) | | | |
+#  \_____\___/|_| |_| |_|_| |_| |_|\___/|_| |_|
 #
 ################################################################################
 
@@ -56,7 +76,15 @@ def parse_3par(info):
     return parsed
 
 ################################################################################
-#
+#    _____           _                 
+#  / ____|         | |                
+# | (___  _   _ ___| |_ ___ _ __ ___  
+#  \___ \| | | / __| __/ _ \ '_ ` _ \ 
+#  ____) | |_| \__ \ ||  __/ | | | | |
+# |_____/ \__, |___/\__\___|_| |_| |_|
+#          __/ |                      
+#         |___/
+#         
 ################################################################################
 
 def inventory_3par(parsed):
@@ -181,11 +209,15 @@ check_info["3par.SystemFailedCapacity"] = {
     "has_perfdata"        :     True,
 }
 
-#################################
-#
-#
-#
-#################################
+##############################################
+#  _    _           _       
+# | |  | |         | |      
+# | |__| | ___  ___| |_ ___ 
+# |  __  |/ _ \/ __| __/ __|
+# | |  | | (_) \__ \ |_\__ \
+# |_|  |_|\___/|___/\__|___/
+#                           
+##############################################
 
 def inventory_3par_hosts(parsed):
     inventory = []
@@ -222,9 +254,15 @@ check_info["3par.hosts"] = {
     'group':                    'Storage',
 }
 
-#################################
-# CPGs
-#################################
+##############################################
+#   _____ _____   _____     
+#  / ____|  __ \ / ____|    
+# | |    | |__) | |  __ ___ 
+# | |    |  ___/| | |_ / __|
+# | |____| |    | |__| \__ \
+#  \_____|_|     \_____|___/
+#                           
+##############################################
 
 def inventory_3par_cpgs(parsed):
     inventory = []
@@ -304,19 +342,11 @@ def check_3par_cpgs(item, params, parsed):
 
             infotext = "%s - %s VVs" % ( stateWord, totalVVs )
 
-            # Show enough decimal digits so that very small percentages are still
-            # visible!
             if used_perc > 0:
                 perc_precision = max(1, 2 - int(round(math.log(used_perc, 10))))
             else:
                 perc_precision = 1
             infotext += " - %%.%df%%%% used (%%s of %%s), %%s" % perc_precision % (used_perc, used_hr, size_hr, levels["levels_text"])
-
-            #{'levels': (8888888, 9999999), 'cpgstatus_critical': '3', 'cpgstatus_warning': '2'}
-            #{'trend_range': 24, 'levels_text': '(levels at 8.48 TB/9.54 TB)', 'cpgstatus_warning': '2', 'inodes_levels': (None, None), 'levels_mb': (8888888.0, 9999999.0), 'magic_normsize': 20, 'levels': (8888888, 9999999), 'cpgstatus_critical': '3', 'levels_low': (50.0, 60.0), 'trend_perfdata': True}
-
-            #{'levels': (22.0, 33.0), 'cpgstatus_critical': '3', 'cpgstatus_warning': '2'}
-            #{'trend_range': 24, 'levels_text': '(levels at 22.00/33.00%)', 'cpgstatus_warning': '2', 'inodes_levels': (None, None), 'levels_mb': (11266252.8, 16899379.2), 'magic_normsize': 20, 'levels': (22.0, 33.0), 'cpgstatus_critical': '3', 'levels_low': (50.0, 60.0), 'trend_perfdata': True}
 
             perfdata.append( ( "UsrUsedMiB", cpg["UsrUsage"]["usedMiB"], warn_mb, crit_mb, 0, cpg["UsrUsage"]["totalMiB"] ) )
 
@@ -333,11 +363,15 @@ check_info["3par.cpgs"] = {
     "includes"                : [ "df.include" ],
 }
 
-#################################
+##############################################
+#  __      __   _                           
+#  \ \    / /  | |                          
+#   \ \  / /__ | |_   _ _ __ ___   ___  ___ 
+#    \ \/ / _ \| | | | | '_ ` _ \ / _ \/ __|
+#     \  / (_) | | |_| | | | | | |  __/\__ \
+#      \/ \___/|_|\__,_|_| |_| |_|\___||___/
 #
-#
-#
-#################################
+##############################################
 
 def inventory_3par_vols(parsed):
     inventory = []
@@ -350,49 +384,101 @@ def inventory_3par_vols(parsed):
 
     return inventory
 
-def check_3par_vols(item, _no_params, parsed):
+def check_3par_vols(item, params, parsed):
     state       = 3
     infotext    = "No item implemented"
     perfdata    = []
 
     if "volumes" in parsed:
         for vol in parsed["volumes"]["members"]:
-            if item == vol["name"]:
-                state = vol["state"] - 1
+            if item != vol["name"]:
+                continue
 
-                if vol["state"] >= 3:
-                    stateWord = "FAILED"
-                elif vol["state"] >= 2:
-                    stateWord = "DEGRADED"
-                elif vol["state"] == 1:
-                    stateWord = "NORMAL"
+            vstate = vol["state"] - 1
+
+            used_mb = vol["userSpace"]["usedMiB"]
+            size_mb = vol["sizeMiB"]
+            used_perc = 100.0 * (float(used_mb) / size_mb)
+            size_gb   = size_mb / 1024.0
+            used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
+            size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
+            cstate = vol["state"] - 1
+
+            # If both numbers end with both MB or GB or TB, then drop the first one
+            if used_hr[-2:] == size_hr[-2:]:
+                used_hr = used_hr[:-3]
+
+            levels = get_filesystem_levels("bla", "volume", size_gb, params)
+            warn_mb, crit_mb       = levels["levels_mb"]
+            warn_grade, crit_grade = levels["compaction_grade"]
+
+            if warn_mb <= -1:
+                #Negativ levels, so calculate mb left
+                rest_mb = size_mb - used_mb
+                crit_mb = crit_mb * -1
+                warn_mb = warn_mb * -1
+                if rest_mb <= crit_mb:
+                    state = 2
+                elif rest_mb <= warn_mb:
+                    state = max(1, state)
                 else:
-                    stateWord = "UNKNOWN"
+                    state = 0
+            else:
+                if used_mb >= crit_mb:
+                    state = 2
+                elif used_mb >= warn_mb:
+                    state = max(1, state)
+                else:
+                    state = 0
+            if vstate >= levels["volstatus_critical"]:
+                state = max(2, state)
+            elif vstate >= levels["volstatus_warning"]:
+                state = max(1, state)
+            else:
+                state = max(0, state)
 
-                infotext = "%s - ID %s" % ( stateWord, vol["baseId"] )
+            if vol["state"] >= 3:
+                stateWord = "FAILED"
+            elif vol["state"] >= 2:
+                stateWord = "DEGRADED"
+            elif vol["state"] == 1:
+                stateWord = "NORMAL"
+            else:
+                stateWord = "UNKNOWN"
 
-                perfdata.append( ( "UsrFreeMiB", vol["userSpace"]["freeMiB"], 0, 0, vol["sizeMiB"] ) )
-                perfdata.append( ( "UsrUsedMiB", vol["userSpace"]["usedMiB"], 0, 0, vol["sizeMiB"] ) ) # TODO: Warns von "usrSpcAllocLimitPct"
-                perfdata.append( ( "Compaction", vol["capacityEfficiency"], 0, 0, 0, 100 ) ) # TODO: deduplication
+            infotext = "%s - ID %s" % ( stateWord, vol["baseId"] )
 
-                return ( state, infotext, perfdata )
+            if used_perc > 0:
+                perc_precision = max(1, 2 - int(round(math.log(used_perc, 10))))
+            else:
+                perc_precision = 1
+            infotext += " - %%.%df%%%% used (%%s of %%s), %%s" % perc_precision % (used_perc, used_hr, size_hr, levels["levels_text"])
+
+            perfdata.append( ( "UsrUsedMiB", vol["userSpace"]["usedMiB"], warn_mb, crit_mb, vol["sizeMiB"] ) )
+            perfdata.append( ( "Compaction", vol["capacityEfficiency"]["compaction"], warn_grade, crit_grade ) )
+
+            return ( state, infotext, perfdata )
 
 check_info["3par.vols"] = {
-    'default_levels_variable':  "threepar_default_levels",
+    'default_levels_variable':  "threepar_volumes_default_levels",
     'check_function':           check_3par_vols,
     'inventory_function':       inventory_3par_vols,
     'parse_function':           parse_3par,
     'service_description':      'Vol Status - %s',
     "has_perfdata"        :     True,
-    'group':                    'Storage',
+    'group':                    '3par_volumes',
 }
 
 
-#################################
-#
-#
-#
-#################################
+##############################################
+#    _____           _       
+#   |  __ \         | |      
+#   | |__) |__  _ __| |_ ___ 
+#   |  ___/ _ \| '__| __/ __|
+#   | |  | (_) | |  | |_\__ \
+#   |_|   \___/|_|   \__|___/
+# 
+##############################################
 
 def inventory_3par_ports(parsed):
     inventory = []

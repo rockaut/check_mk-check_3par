@@ -3,6 +3,43 @@
 
 register_check_parameters(
     subgroup_storage,
+    "3par_volumes",
+    _("3Par - Volumes"),
+    Dictionary(
+        elements = filesystem_elements + [
+            ( "volstatus_warning",
+              DropdownChoice(
+                  title = _("Warn on Volume status"),
+                  default_value = 2,
+                  choices = [
+                     ( 3,   _("Failed") ),
+                     ( 2,   _("Degraded") ),
+                     ( 1,   _("Normal") ),
+                  ]
+              )
+            ),
+            ( "volstatus_critical",
+              DropdownChoice(
+                  title = _("Critical on Volume status"),
+                  default_value = 3,
+                  choices = [
+                     ( 3,   _("Failed") ),
+                     ( 2,   _("Degraded") ),
+                     ( 1,   _("Normal") ),
+                  ]
+              )
+            ),
+        ],
+        hidden_keys = ["flex_levels", "trend_perfdata", "trend_showtimeleft", "trend_timeleft", "trend_perc", "trend_mb", "trend_range", "magic", "magic_normsize", "levels_low", "inodes_levels" ]
+    ),
+    TextAscii(
+        title = _("Name of the Volume"),
+    ),
+    "dict"
+)
+
+register_check_parameters(
+    subgroup_storage,
     "3par_cpgs",
     _("3Par - CPGs"),
     Dictionary(
