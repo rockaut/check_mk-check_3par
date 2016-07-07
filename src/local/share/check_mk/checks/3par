@@ -230,7 +230,7 @@ def inventory_3par_hosts(parsed):
 
     return inventory
 
-def check_3par_hosts(item, _no_params, parsed):
+def check_3par_hosts(item, params, parsed):
     state       = 3
     infotext    = "No item implemented"
     perfdata    = []
@@ -242,7 +242,28 @@ def check_3par_hosts(item, _no_params, parsed):
         if item == host["name"]:
             infotext = "Host: %s" % ( host["name"] )
             state = 0
+
+            portCount = get_hostports_state( item, params, parsed )
+
+            infotext += " on %s Ports" % ( portCount )
+
             return ( state, infotext, perfdata )
+
+def get_hostports_state(host, params, parsed):
+    portCount  = 0
+
+    if "ports" not in parsed:
+        return portCount
+
+    for port in parsed["ports"]["members"]:
+
+        if "device" not in port:
+            return portCount
+
+        if host in port["device"]:
+            portCount += 1
+
+    return portCount
 
 check_info["3par.hosts"] = {
     'default_levels_variable':  "threepar_default_levels",
