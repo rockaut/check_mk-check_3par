@@ -1,0 +1,23 @@
+{
+    'author': 'Markus Fischbacher',
+    'description': 'A check_mk agent for HP 3Par over WSAPI',
+    'download_url': 'https://github.com/rockaut/check_mk-3par/releases',
+    'files': {
+        'agents': [ 'special/agent_3par' ],
+        'checkman': [],
+        'checks': [ '3par' ],
+        'doc': [],
+        'inventory': [],
+        'notifications': [],
+        'pnp-templates': [],
+        'web': [
+            'plugins/perfometer/3par.py',
+            'plugins/wato/3par.py'
+        ]
+    },
+    'name': '3par',
+    'title': '3par Agent and Checks',
+    'version': '%VERSION%',
+    'version.min_required': '1.2.6p12',
+    'version.packaged': '1.2.6p12'
+}
