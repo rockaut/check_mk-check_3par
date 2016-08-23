@@ -40,6 +40,43 @@ register_check_parameters(
 
 register_check_parameters(
     subgroup_storage,
+    "3par_flashcache",
+    _("3Par - Flashcache"),
+    Dictionary(
+        elements = filesystem_elements + [
+            ( "flashcache_state_warning",
+              DropdownChoice(
+                  title = _("Warn on FlashCache status"),
+                  default_value = 2,
+                  choices = [
+                     ( 3,   _("Failed") ),
+                     ( 2,   _("Degraded") ),
+                     ( 1,   _("Normal") ),
+                  ]
+              )
+            ),
+            ( "flashcache_state_critical",
+              DropdownChoice(
+                  title = _("Critical on FlashCache status"),
+                  default_value = 3,
+                  choices = [
+                     ( 3,   _("Failed") ),
+                     ( 2,   _("Degraded") ),
+                     ( 1,   _("Normal") ),
+                  ]
+              )
+            ),
+        ],
+        hidden_keys = ["flex_levels", "trend_perfdata", "trend_showtimeleft", "trend_timeleft", "trend_perc", "trend_mb", "trend_range", "magic", "magic_normsize", "levels_low", "inodes_levels" ]
+    ),
+    TextAscii(
+        title = _("Name of FlashCache"),
+    ),
+    "dict"
+)
+
+register_check_parameters(
+    subgroup_storage,
     "3par_cpgs",
     _("3Par - CPGs"),
     Dictionary(

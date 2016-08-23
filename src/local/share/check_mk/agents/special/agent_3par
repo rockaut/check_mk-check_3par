@@ -179,6 +179,22 @@ def get_ports( sessionKey, sessionHost, sessionPort = 8080 ):
 
     return parsed_response
 
+def get_flashcache( sessionKey, sessionHost, sessionPort = 8080 ):
+    volUrl = '/api/v1/flashcache'
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPSConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", volUrl, "", apiHeaders)
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+
 
 def print_usage():
     print 'usage: agent_3parwsapi -H <Host> -U <User> -P <Password> -v <Value,Value>'
@@ -192,7 +208,7 @@ def print_usage():
 #   |                                                                      |
 #   +----------------------------------------------------------------------+
 
-_defaultValues = [ "system", "cpgs", "volumes" ]
+_defaultValues = [ "system", "cpgs", "volumes", "flashcache" ]
 
 def main( argv ):
     fetchValues = _defaultValues
@@ -258,6 +274,9 @@ def main( argv ):
 
         ports = get_ports( sessionKey, sessionHost )
         result["ports"] = ports
+
+        flashcache = get_flashcache( sessionKey, sessionHost )
+        result["flashcache"] = flashcache
 
         print json.dumps(result, sort_keys=True, indent=4, separators=(',', ': '))
 

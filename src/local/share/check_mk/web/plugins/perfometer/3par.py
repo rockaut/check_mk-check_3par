@@ -5,3 +5,4 @@ perfometers["check_mk-3par.cpgs"] = perfometer_check_mk_df
 #perfometers["check_mk-3par.vols"] = perfometer_check_mk_df
 perfometers["check_mk-3par.SystemTotalCapacity"] = perfometer_check_mk_df
 perfometers["check_mk-3par.SystemFailedCapacity"] = perfometer_check_mk_df
+perfometers["check_mk-3par.flashcache"] = perfometer_check_mk_df

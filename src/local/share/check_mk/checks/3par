@@ -19,6 +19,13 @@ filter_NoSystemVols = True
 threepar_default_levels = {}
 factory_settings["threepar_default_levels"] = {}
 
+threepar_flashcache_default_levels = {}
+factory_settings["threepar_flashcache_default_levels"] = {
+    "flashcache_state_warning"   : 2,
+    "flashcache_state_critical"  : 3,
+    "levels" : ( 80.0, 90.0 ),
+}
+
 threepar_cpgs_default_levels = {}
 factory_settings["threepar_cpgs_default_levels"] = {
     "cpgstatus_warning"  : 2,
@@ -382,6 +389,72 @@ check_info["3par.cpgs"] = {
     'service_description':      'CPG Status - %s',
     "has_perfdata"        :     True,
     "includes"                : [ "df.include" ],
+}
+
+
+##############################################
+#  ______ _           _                    _          
+# |  ____| |         | |                  | |         
+# | |__  | | __ _ ___| |__   ___ __ _  ___| |__   ___ 
+# |  __| | |/ _` / __| '_ \ / __/ _` |/ __| '_ \ / _ \
+# | |    | | (_| \__ \ | | | (_| (_| | (__| | | |  __/
+# |_|    |_|\__,_|___/_| |_|\___\__,_|\___|_| |_|\___|
+#
+##############################################
+
+def inventory_3par_flashcache(parsed):
+    inventory = []
+
+    if "flashcache" not in parsed:
+        return inventory
+
+    return [ ( "FlashCache", {} ) ]
+
+def check_3par_flashcache(item, params, parsed):
+    state    = 0
+    infotext = ""
+    perfdata = []
+
+    if parsed["flashcache"]["mode"] != 2:
+        infotext = "Simulator Mode!"
+
+    if parsed["flashcache"]["state"] >= params["flashcache_state_critical"]:
+        state = max( 2, state)
+    elif parsed["flashcache"]["state"] >= params["flashcache_state_warning"]:
+        state = max( 1, state)
+    else:
+        state = max( 0, state)
+
+    if parsed["flashcache"]["state"] == 3:
+        infotext = "State Failed - " + infotext
+    elif parsed["flashcache"]["state"] == 2:
+        infotext = "State Degraded - " + infotext
+    else:
+        infotext = "State Normal -" + infotext
+
+    levels = get_filesystem_levels("bla", "flashcache", parsed["flashcache"]["sizeGiB"], params)
+    warn_mb, crit_mb = levels["levels_mb"]
+    infotext = infotext + " %s GiB of %s GiB %s" % ( parsed["flashcache"]["usedSizeGiB"], parsed["flashcache"]["sizeGiB"], levels["levels_text"] )
+
+    if parsed["flashcache"]["usedSizeGiB"] > ( crit_mb / 1024 ):
+        state = max( 2, state)
+    elif parsed["flashcache"]["usedSizeGiB"] > ( warn_mb / 1024 ):
+        state = max( 1, state)
+    else:
+        state = max( 0, state)
+
+    perfdata.append( ( "used", parsed["flashcache"]["usedSizeGiB"], warn_mb, crit_mb, 0, parsed["flashcache"]["sizeGiB"] ) )
+
+    return ( state, infotext, perfdata )
+
+check_info["3par.flashcache"] = {
+    'default_levels_variable':  "threepar_flashcache_default_levels",
+    'check_function':           check_3par_flashcache,
+    'inventory_function':       inventory_3par_flashcache,
+    'parse_function':           parse_3par,
+    'service_description':      'Status - %s',
+    "has_perfdata"        :     True,
+    'group':                    '3par_flashcache',
 }
 
 ##############################################
