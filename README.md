@@ -28,8 +28,10 @@
 - System
 - Hosts
 - Ports
+- FlashCache
 
 ## TODO
 - docs
 - dictionary parameters
 - check_mk package
+- Man-Pages

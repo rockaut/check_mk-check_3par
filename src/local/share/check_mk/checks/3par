@@ -443,7 +443,7 @@ def check_3par_flashcache(item, params, parsed):
     else:
         state = max( 0, state)
 
-    perfdata.append( ( "used", parsed["flashcache"]["usedSizeGiB"], warn_mb, crit_mb, 0, parsed["flashcache"]["sizeGiB"] ) )
+    perfdata.append( ( "used", parsed["flashcache"]["usedSizeGiB"], ( warn_mb / 1024 ), ( crit_mb / 1024 ), 0, parsed["flashcache"]["sizeGiB"] ) )
 
     return ( state, infotext, perfdata )
 
