@@ -1,8 +1,10 @@
 #!/usr/bin/env python
+#!/usr/bin/env python
 # -*- encoding: utf-8; py-indent-offset: 4 -*-
 
 import httplib, urllib2, pprint, sys, os, getopt, socket
 import simplejson as json
+import subprocess
 
 # build_apiHeaders function
 def build_apiHeaders( sessionKey = "" ):
@@ -197,7 +199,7 @@ def get_flashcache( sessionKey, sessionHost, sessionPort = 8080 ):
 
 
 def print_usage():
-    print 'usage: agent_3parwsapi -H <Host> -U <User> -P <Password> -v <Value,Value>'
+    print 'usage: agent_3parwsapi -H <Host> -U <User> -P <Password> -v <Value,Value> --sshuser <User>'
 
 #   .--Main----------------------------------------------------------------.
 #   |                        __  __       _                                |
@@ -217,16 +219,16 @@ def main( argv ):
     sessionUser = ''
     sessionPassword = ''
     sessionKey = ''
+    sshUser = ''
 
     try:
-        opts, args = getopt.getopt( argv, "hH:hU:hP:hv:", ["Host=", "User=", "Password=", "Values="])
+        opts, args = getopt.getopt( argv, "hH:hU:hP:hv:hs:", ["Host=", "User=", "Password=", "Values=", "sshuser="])
         if not opts:
             print_usage()
             sys.exit(2)
     except getopt.GetoptError:
         print_usage()
         sys.exit(2)
-
 
     for opt, arg in opts:
         if opt == '-h':
@@ -240,8 +242,10 @@ def main( argv ):
             sessionUser = arg
         elif opt in ("-P", "--Post"):
             sessionPassword = arg
+        elif opt in ("-s", "--sshuser"):
+            sshUser = arg
 
-    if sessionHost == "" or sessionUser == "" or sessionPassword == "":
+    if sessionHost == "" or sessionUser == "" or sessionPassword == "" or sshUser == "":
         print_usage()
         sys.exit(2)
 
@@ -279,7 +283,10 @@ def main( argv ):
         result["flashcache"] = flashcache
 
         print json.dumps(result, sort_keys=True, indent=4, separators=(',', ': '))
-
+        
+        cmdSsh = "%s/agent_3parssh %s %s" % ( os.path.dirname(__file__), sessionHost, sshUser )
+        print subprocess.check_output( cmdSsh, shell=True, executable='/bin/bash' )
+        
     except:
         print("Unexpected error:", sys.exc_info()[0])
         if sessionKey != "":

@@ -1,0 +1,114 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+
+import simplejson as json
+
+################################################################################
+# __      __        _       _     _      
+# \ \    / /       (_)     | |   | |     
+#  \ \  / /_ _ _ __ _  __ _| |__ | | ___ 
+#   \ \/ / _` | '__| |/ _` | '_ \| |/ _ \
+#    \  / (_| | |  | | (_| | |_) | |  __/
+#     \/ \__,_|_|  |_|\__,_|_.__/|_|\___|
+#                                        
+################################################################################
+
+threepar_default_levels = {}
+factory_settings["threepar_default_levels"] = {}
+
+################################################################################
+#   _____                                      
+#  / ____|                                     
+# | |     ___  _ __ ___  _ __ ___   ___  _ __  
+# | |    / _ \| '_ ` _ \| '_ ` _ \ / _ \| '_ \ 
+# | |___| (_) | | | | | | | | | | | (_) | | | |
+#  \_____\___/|_| |_| |_|_| |_| |_|\___/|_| |_|
+#
+################################################################################
+
+
+################################################################################
+#    _____           _                 
+#  / ____|         | |                
+# | (___  _   _ ___| |_ ___ _ __ ___  
+#  \___ \| | | / __| __/ _ \ '_ ` _ \ 
+#  ____) | |_| \__ \ ||  __/ | | | | |
+# |_____/ \__, |___/\__\___|_| |_| |_|
+#          __/ |                      
+#         |___/
+#         
+################################################################################
+
+threepar_node_cpu_default_levels = { "levels": (20.0, 10.0) }
+factory_settings["threepar_node_cpu_default_levels"] = { "levels": (20.0, 10.0) }
+
+def parse_3parssh_cpu(info):
+    start = -1
+    end   = -1
+
+    indexes = [i for i,x in enumerate(info) if x == ['---statcpu---']]
+    return info[indexes[0]:indexes[1]]
+
+    return []
+
+def inventory_3parstatcpu(parsed):
+    inventory = []
+
+    for node in parsed[3:]:
+        nodeid = "CPU Node %s" % ( node[0].split(",")[0] )
+        inventory += [ ( nodeid, {} ) ]
+
+    return inventory
+
+def check_3parstatcpu(item, params, parsed):
+    state       = 3
+    infotext    = ""
+    perfdata    = []
+
+    totalnodes = 0
+
+    for nodeInfos in parsed[3:]:
+        node = nodeInfos[0].split(",")[0]
+        if item != ( "CPU Node %s" % ( node ) ):
+            continue
+
+        user = nodeInfos[1]
+        sys  = nodeInfos[2]
+        idle = nodeInfos[3]
+        intr = nodeInfos[4]
+        ctxt = nodeInfos[5]
+
+        warn, crit = params["levels"]
+        
+        perfdata.append( ( "user", user ) )
+        perfdata.append( ( "sys", sys ) )
+        perfdata.append( ( "idle", idle ) )
+        perfdata.append( ( "intr", intr ) )
+        perfdata.append( ( "ctxt", ctxt ) )
+
+        utilized = 100-int(idle)
+
+        if utilized >= crit:
+            state = max( state, 2 )
+        elif utilized >= warn:
+            state = max( state, 1 )
+        else:
+            state = 0
+
+        infotext = "Node %s is %s%% utilized (%s%% idle)" % ( node, utilized, idle )
+        state = 0
+
+    if infotext == "":
+        infotext = "No item implemented"
+
+    return ( state, infotext, perfdata )
+
+check_info["3parssh"] = {
+    'default_levels_variable':  "threepar_node_cpu_default_levels",
+    'check_function':           check_3parstatcpu,
+    'inventory_function':       inventory_3parstatcpu,
+    'parse_function':           parse_3parssh_cpu,
+    'service_description':      'Status %s',
+    "has_perfdata"        :     True,
+    'group':                    '3par_nodecpu',
+}
