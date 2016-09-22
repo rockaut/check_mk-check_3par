@@ -124,7 +124,6 @@ check_info["3par"] = {
     'service_description':      'System Status - %s',
     "has_perfdata"        :     False,
     'group':                    'Storage',
-    'includes':                [ '3par.include' ],
 }
 
 ################################################################################
@@ -163,14 +162,13 @@ def check_3par_systemtotalcap(item, params, parsed):
     return ( state, infotext, perfdata )
 
 check_info["3par.SystemTotalCapacity"] = {
-    "group"                   : "filesystem",
+    "group"                   : "3par_systotcap",
     'default_levels_variable':  "filesystem_default_levels",
     'check_function':           check_3par_systemtotalcap,
     'inventory_function':       inventory_3par_systemtotalcap,
     'parse_function':           parse_3par,
     'service_description':      'Total Capacity',
     "has_perfdata"        :     True,
-    'includes':                [ '3par.include' ],
 }
 
 
@@ -209,14 +207,13 @@ def check_3par_systemfailedcap(item, params, parsed):
     return ( state, infotext, perfdata )
 
 check_info["3par.SystemFailedCapacity"] = {
-    "group"                   : "filesystem",
+    "group"                   : "3par_sysfailcap",
     "default_levels_variable" : "filesystem_default_levels",
     'check_function':           check_3par_systemfailedcap,
     'inventory_function':       inventory_3par_systemfailedcap,
     'parse_function':           parse_3par,
     'service_description':      'Total Failed',
     "has_perfdata"        :     True,
-    'includes':                [ '3par.include' ],
 }
 
 ##############################################
@@ -283,7 +280,6 @@ check_info["3par.hosts"] = {
     'service_description':      'Host Status - %s',
     "has_perfdata"        :     True,
     'group':                    'Storage',
-    'includes':                [ '3par.include' ],
 }
 
 ##############################################
@@ -392,7 +388,7 @@ check_info["3par.cpgs"] = {
     'parse_function':           parse_3par,
     'service_description':      'CPG Status - %s',
     "has_perfdata"        :     True,
-    "includes"                : [ "df.include", '3par.include' ],
+    "includes"                : [ "df.include" ],
 }
 
 
@@ -459,7 +455,6 @@ check_info["3par.flashcache"] = {
     'service_description':      'Status - %s',
     "has_perfdata"        :     True,
     'group':                    '3par_flashcache',
-    'includes':                [ '3par.include' ],
 }
 
 ##############################################
@@ -566,7 +561,6 @@ check_info["3par.vols"] = {
     'service_description':      'Vol Status - %s',
     "has_perfdata"        :     True,
     'group':                    '3par_volumes',
-    'includes':                [ '3par.include' ],
 }
 
 
@@ -674,5 +668,4 @@ check_info["3par.ports"] = {
     'service_description':      'Port Status - %s',
     "has_perfdata"        :     True,
     'group':                    '3par_ports',
-    'includes':                [ '3par.include' ],
 }
