@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-#!/usr/bin/env python
 # -*- encoding: utf-8; py-indent-offset: 4 -*-
 
 import httplib, urllib2, pprint, sys, os, getopt, socket

@@ -124,6 +124,7 @@ check_info["3par"] = {
     'service_description':      'System Status - %s',
     "has_perfdata"        :     False,
     'group':                    'Storage',
+    'includes':                [ '3par.include' ],
 }
 
 ################################################################################
@@ -169,6 +170,7 @@ check_info["3par.SystemTotalCapacity"] = {
     'parse_function':           parse_3par,
     'service_description':      'Total Capacity',
     "has_perfdata"        :     True,
+    'includes':                [ '3par.include' ],
 }
 
 
@@ -214,6 +216,7 @@ check_info["3par.SystemFailedCapacity"] = {
     'parse_function':           parse_3par,
     'service_description':      'Total Failed',
     "has_perfdata"        :     True,
+    'includes':                [ '3par.include' ],
 }
 
 ##############################################
@@ -280,6 +283,7 @@ check_info["3par.hosts"] = {
     'service_description':      'Host Status - %s',
     "has_perfdata"        :     True,
     'group':                    'Storage',
+    'includes':                [ '3par.include' ],
 }
 
 ##############################################
@@ -388,7 +392,7 @@ check_info["3par.cpgs"] = {
     'parse_function':           parse_3par,
     'service_description':      'CPG Status - %s',
     "has_perfdata"        :     True,
-    "includes"                : [ "df.include" ],
+    "includes"                : [ "df.include", '3par.include' ],
 }
 
 
@@ -455,6 +459,7 @@ check_info["3par.flashcache"] = {
     'service_description':      'Status - %s',
     "has_perfdata"        :     True,
     'group':                    '3par_flashcache',
+    'includes':                [ '3par.include' ],
 }
 
 ##############################################
@@ -561,6 +566,7 @@ check_info["3par.vols"] = {
     'service_description':      'Vol Status - %s',
     "has_perfdata"        :     True,
     'group':                    '3par_volumes',
+    'includes':                [ '3par.include' ],
 }
 
 
@@ -668,4 +674,5 @@ check_info["3par.ports"] = {
     'service_description':      'Port Status - %s',
     "has_perfdata"        :     True,
     'group':                    '3par_ports',
+    'includes':                [ '3par.include' ],
 }

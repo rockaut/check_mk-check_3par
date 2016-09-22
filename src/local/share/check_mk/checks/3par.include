@@ -1,0 +1,51 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+
+################################################################################
+#   _____                                      
+#  / ____|                                     
+# | |     ___  _ __ ___  _ __ ___   ___  _ __  
+# | |    / _ \| '_ ` _ \| '_ ` _ \ / _ \| '_ \ 
+# | |___| (_) | | | | | | | | | | | (_) | | | |
+#  \_____\___/|_| |_| |_|_| |_| |_|\___/|_| |_|
+#
+################################################################################
+
+def parse_3par(info):
+    a = [item for sublist in info for item in sublist]
+    b = ''.join(a)
+    parsed = json.loads(b)
+    return parsed
+
+def parse_3parssh(info):
+    parsed = {}
+    
+    ### statcpu parsing ###
+    indexes = [i for i,x in enumerate(info) if x == ['---statcpu---']]
+    parsed["statcpu"] = info[indexes[0]:indexes[1]]
+
+    ### showcage parsing ###
+    indexes = [i for i,x in enumerate(info) if x == ['---showcage---']]
+    showcageData = info[indexes[0]:indexes[1]]
+    cageIndexes = [i for i,x in enumerate( showcageData) if x[0].startswith('-----------Cage detail info for')]
+
+    parsed["showcage"] = {}
+
+    for x in range(0,len(cageIndexes)):
+        cageNum = showcageData[cageIndexes[x]][0].replace('-----------Cage detail info for cage', '').replace(' ---------', '')
+        if x < len(cageIndexes)-1:
+            parsed["showcage"][cageNum] = showcageData[cageIndexes[x]:cageIndexes[x+1]]
+        else:
+            parsed["showcage"][cageNum] = showcageData[cageIndexes[x]:]
+
+    ### showpd parsing ###
+    indexes = [i for i,x in enumerate(info) if x == ['---showpd---']]
+    showpdData = info[indexes[0]:indexes[1]]
+    
+    parsed["showpd"] = {}
+
+    for x in showpdData[2:-2]:
+        pddata = x[0].split()
+        parsed["showpd"][pddata[3]] = pddata
+
+    return parsed

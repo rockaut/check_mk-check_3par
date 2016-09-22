@@ -1,0 +1,64 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+
+################################################################################
+#  _____  _               _           _   _____  _     _        
+# |  __ \| |             (_)         | | |  __ \(_)   | |       
+# | |__) | |__  _   _ ___ _  ___ __ _| | | |  | |_ ___| | _____ 
+# |  ___/| '_ \| | | / __| |/ __/ _` | | | |  | | / __| |/ / __|
+# | |    | | | | |_| \__ \ | (_| (_| | | | |__| | \__ \   <\__ \
+# |_|    |_| |_|\__, |___/_|\___\__,_|_| |_____/|_|___/_|\_\___/
+#                __/ |                                          
+#               |___/                                           
+#         
+################################################################################
+
+def inventory_3par_pd(parsed):
+    inventory = []
+
+    data = parsed["showpd"]
+
+    for diskNum in data:
+        diskId = "Disk %s" % ( diskNum )
+        inventory += [ ( diskId, {} ) ]
+
+    return inventory
+
+def check_3par_pd(item, params, parsed):
+    state       = -1
+    infotext    = ""
+    perfdata    = []
+
+    data = parsed["showpd"]
+
+    for diskNum in data:
+        if diskNum != item.replace("Disk ", ""):
+            continue
+
+        cageId, cageSlot, cageC = data[diskNum][1].split(":")
+
+        for x in parsed["showcage"][cageId]:
+           pass
+
+        infotext += "Status %s" % ( data[diskNum][2] )
+        if data[diskNum][2] == "normal":
+            state = max( state, 0 )
+
+    if infotext == "":
+        infotext = "not implemented"
+
+    if state == -1:
+        state = 3
+
+    return ( state, infotext, perfdata )
+
+check_info["3parssh.pd"] = {
+    'default_levels_variable':  "threepar_default_levels",
+    'parse_function':           parse_3parssh,
+    'check_function':           check_3par_pd,
+    'inventory_function':       inventory_3par_pd,
+    'service_description':      'Status %s',
+    "has_perfdata"        :     True,
+    'group':                    'Storage',
+    'includes':                [ '3par.include' ],
+}

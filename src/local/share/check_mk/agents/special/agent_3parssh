@@ -11,6 +11,10 @@ echo "---statcpu---"
 ssh $2@$1 statcpu -d 1 -iter 1 -t
 echo "---statcpu---"
 
-echo "---showbattery---"
-ssh $2@$1 showbattery -d
-echo "---showbattery---"
+echo "---shownode---"
+ssh $2@$1 shownode -verbose
+echo "---shownode---"
+
+echo "---showcage---"
+ssh $2@$1 showcage -d
+echo "---showcage---"
