@@ -408,6 +408,9 @@ def inventory_3par_flashcache(parsed):
     if "flashcache" not in parsed:
         return inventory
 
+    if parsed["flashcache"]["code"] == 285:
+        return inventory
+
     return [ ( "FlashCache", {} ) ]
 
 def check_3par_flashcache(item, params, parsed):
