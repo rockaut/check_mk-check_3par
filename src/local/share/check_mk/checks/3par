@@ -108,6 +108,7 @@ def check_3par(item, params, parsed):
 
     infotext = "%s Node %s (SN: %s / V: %s)" % ( systemInfos["totalNodes"], systemInfos["model"], systemInfos["serialNumber"], systemInfos["systemVersion"] )
 
+    # TODO: what if node removed?
     if len(systemInfos["onlineNodes"]) < systemInfos["totalNodes"]:
         state = 2
         infotext = "Only %s of %s nodes online!" % ( systemInfos["onlineNodes"], systemInfos["totalNodes"] )
@@ -481,6 +482,31 @@ def inventory_3par_vols(parsed):
 
     return inventory
 
+def get_sysrep_vlunstatistics(vlun, parsed):
+    stats = {}
+    for member in parsed["sysrep_vlunstatistics"]["members"]:
+        if member["volumeName"] != vlun:
+            continue
+
+        memberid = "%s:%s:%s:%s" % ( member["node"], member["slot"], member["cardPort"], member["hostname"] )
+        stats[memberid] = member
+
+    values   = {}
+    IO_read  = 0
+    IO_write = 0
+    IO_total = 0
+
+    for member in stats:
+        IO_read  += stats[member]["IO"]["read"]
+        IO_write += stats[member]["IO"]["write"]
+        IO_total += stats[member]["IO"]["total"]
+
+    values = {
+        'IO':   { 'read': IO_read, 'write': IO_write, 'total': IO_total }
+    }
+
+    return values
+
 def check_3par_vols(item, params, parsed):
     state       = 3
     infotext    = "No item implemented"
@@ -490,6 +516,12 @@ def check_3par_vols(item, params, parsed):
         for vol in parsed["volumes"]["members"]:
             if item != vol["name"]:
                 continue
+
+            if "sysrep_vlunstatistics" in parsed:
+                stats = get_sysrep_vlunstatistics( item, parsed )
+                perfdata.append( ( "IO_read", stats['IO']['read'] ) )
+                perfdata.append( ( "IO_write", stats['IO']['write'] ) )
+                perfdata.append( ( "IO_total", stats['IO']['total'] ) )
 
             vstate = vol["state"] - 1
 
@@ -597,7 +629,8 @@ def check_3par_ports(item, params, parsed):
             state       = -1
             infotext    = "No item implemented"
             perfdata    = []
-            portName = ""
+            portName    = ""
+            portPos     = ""
 
             if "label" in port:
                 if "portWWN" in port:
@@ -654,6 +687,36 @@ def check_3par_ports(item, params, parsed):
                 elif port["failoverState"] == 6:    infotext += " - Failover ACTIVE_FAILED"
                 elif port["failoverState"] == 7:    infotext += " - FAILBACK_PENDING"
 
+            if "portPos" in port:
+                portPos = "%s:%s:%s" % ( port["portPos"]["node"], port["portPos"]["slot"], port["portPos"]["cardPort"] )
+                infotext += " - %s" % ( portPos )
+
+            if "partnerPos" in port:
+                infotext += " (%s:%s:%s)" % ( port["partnerPos"]["node"], port["partnerPos"]["slot"], port["partnerPos"]["cardPort"] )
+
+            if portPos != "" and "sysrep_portstatistics" in parsed:
+                stats = get_sysrepstats_port( portPos, parsed )
+                if 'serviceTimeMS' in stats:
+                    perfdata.append( ( "serviceTimeMS_read", stats["serviceTimeMS"]["read"] ) )
+                    perfdata.append( ( "serviceTimeMS_write", stats["serviceTimeMS"]["write"] ) )
+                    perfdata.append( ( "serviceTimeMS_total", stats["serviceTimeMS"]["total"] ) )
+                if 'IO' in stats:
+                    perfdata.append( ( "IO_read", stats["IO"]["read"] ) )
+                    perfdata.append( ( "IO_write", stats["IO"]["write"] ) )
+                    perfdata.append( ( "IO_total", stats["IO"]["total"] ) )
+                if 'IOSizeKB' in stats:
+                    perfdata.append( ( "IOSizeKB_read", stats["IOSizeKB"]["read"] ) )
+                    perfdata.append( ( "IOSizeKB_write", stats["IOSizeKB"]["write"] ) )
+                    perfdata.append( ( "IOSizeKB_total", stats["IOSizeKB"]["total"] ) )
+                if 'KBytes' in stats:
+                    perfdata.append( ( "KBytes_read", stats["KBytes"]["read"] ) )
+                    perfdata.append( ( "KBytes_write", stats["KBytes"]["write"] ) )
+                    perfdata.append( ( "KBytes_total", stats["KBytes"]["total"] ) )
+                if 'busyPct' in stats:
+                    perfdata.append( ( "busyPct", stats["busyPct"] ) )
+                if 'queueLength' in stats:
+                    perfdata.append( ( "queueLength", stats["queueLength"] ) )
+
             if state == -1:
                 state = 3
 
@@ -662,6 +725,16 @@ def check_3par_ports(item, params, parsed):
     if state == -1:
         state = 3
     return ( state, infotext, perfdata )
+
+def get_sysrepstats_port(portPos, parsed):
+    for member in parsed["sysrep_portstatistics"]["members"]:
+        memberPos = "%s:%s:%s" % ( member["node"], member["slot"], member["cardPort"] )
+        if memberPos != portPos:
+            continue
+
+        return member
+
+    return {}
 
 check_info["3par.ports"] = {
     'default_levels_variable':  "threepar_ports_default_levels",
