@@ -11,14 +11,6 @@ echo "---statcpu---"
 ssh $2@$1 statcpu -d 1 -iter 1 -t
 echo "---statcpu---"
 
-echo "---shownode---"
-ssh $2@$1 shownode -verbose
-echo "---shownode---"
-
 echo "---showcage---"
 ssh $2@$1 showcage -d
 echo "---showcage---"
-
-echo "---showpd---"
-ssh $2@$1 showpd -i
-echo "---showpd---"
