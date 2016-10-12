@@ -345,16 +345,28 @@ def main( argv ):
         result["flashcache"] = flashcache
         
         sysrep_physicaldiskstatistics = get_sysrep_physicaldiskstatistics( sessionKey, sessionHost )
-        result["sysrep_physicaldiskstatistics"] = sysrep_physicaldiskstatistics
+        if "code" in sysrep_physicaldiskstatistics and sysrep_physicaldiskstatistics["code"] == 9:
+            pass
+        else:
+            result["sysrep_physicaldiskstatistics"] = sysrep_physicaldiskstatistics
         
         sysrep_cachememorystatistics = get_sysrep_cachememorystatistics( sessionKey, sessionHost )
-        result["sysrep_cachememorystatistics"] = sysrep_cachememorystatistics
+        if "code" in sysrep_cachememorystatistics and sysrep_cachememorystatistics["code"] == 9:
+            pass
+        else:
+            result["sysrep_cachememorystatistics"] = sysrep_cachememorystatistics
         
         sysrep_portstatistics = get_sysrep_portstatistics( sessionKey, sessionHost )
-        result["sysrep_portstatistics"] = sysrep_portstatistics
+        if "code" in sysrep_portstatistics and sysrep_portstatistics["code"] == 9:
+            pass
+        else:
+            result["sysrep_portstatistics"] = sysrep_portstatistics
         
         sysrep_vlunstatistics = get_sysrep_vlunstatistics( sessionKey, sessionHost )
-        result["sysrep_vlunstatistics"] = sysrep_vlunstatistics
+        if "code" in sysrep_vlunstatistics and sysrep_vlunstatistics["code"] == 9:
+            pass
+        else:
+            result["sysrep_vlunstatistics"] = sysrep_vlunstatistics
 
         print json.dumps(result, sort_keys=True, indent=4, separators=(',', ': '))
         
