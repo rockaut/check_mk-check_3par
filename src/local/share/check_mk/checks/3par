@@ -189,26 +189,53 @@ def check_3par_systemfailedcap(item, params, parsed):
 
     systemInfos = parsed["system"]
 
-    failedGB = systemInfos["failedCapacityMiB"] / 1024.0
-    totalGB = systemInfos["totalCapacityMiB"] / 1024.0
-    perc = failedGB / totalGB * 100.0
+    used_mb = systemInfos["failedCapacityMiB"]
+    size_mb = systemInfos["totalCapacityMiB"]
+    used_perc = 100.0 * (float(used_mb) / size_mb)
+    size_gb   = size_mb / 1024.0
+    used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
+    size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
 
-    if perc >= params["levels"][1]:
-        state = 2
-    elif perc >= params["levels"][0]:
-        state = 1
-    elif perc < params["levels"][0]:
-        state = 0
+    # If both numbers end with both MB or GB or TB, then drop the first one
+    if used_hr[-2:] == size_hr[-2:]:
+        used_hr = used_hr[:-3]
+
+    levels = get_filesystem_levels("bla", "volume", size_gb, params)
+    warn_mb, crit_mb       = levels["levels_mb"]
+
+    if warn_mb <= -1:
+        #Negativ levels, so calculate mb left
+        rest_mb = size_mb - used_mb
+        crit_mb = crit_mb * -1
+        warn_mb = warn_mb * -1
+        if rest_mb <= crit_mb:
+            state = 2
+        elif rest_mb <= warn_mb:
+            state = max(1, state)
+        else:
+            state = 0
     else:
-        state = 3
+        if used_mb >= crit_mb:
+            state = 2
+        elif used_mb >= warn_mb:
+            state = max(1, state)
+        else:
+            state = 0
 
-    infotext = "{:.0f}% used ({:.1f} of {:.1f} GB),(levels at {:.2f}/{:.2f}%)".format( perc, failedGB, totalGB, params["levels"][0], params["levels"][1] )
+    #infotext = "{:.0f}% used ({:.1f} of {:.1f} GB),(levels at {:.2f}/{:.2f}%)".format( used_perc, used_hr, size_hr, params["levels"][0], params["levels"][1] )
+    if used_perc > 0:
+        perc_precision = max(1, 2 - int(round(math.log(used_perc, 10))))
+    else:
+        perc_precision = 1
+    
+    infotext += "%%.%df%%%% used (%%s of %%s), %%s" % perc_precision % (used_perc, used_hr, size_hr, levels["levels_text"])
+    
     perfdata.append( ( "failedCapacityMiB", systemInfos["failedCapacityMiB"], params["levels"][0], params["levels"][1], 0, systemInfos["totalCapacityMiB"] ) )
 
     return ( state, infotext, perfdata )
 
 check_info["3par.SystemFailedCapacity"] = {
-    "group"                   : "3par_sysfailcap",
+    "group"                   : "filesystem",
     "default_levels_variable" : "filesystem_default_levels",
     'check_function':           check_3par_systemfailedcap,
     'inventory_function':       inventory_3par_systemfailedcap,
