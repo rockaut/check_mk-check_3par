@@ -144,53 +144,8 @@ def check_3par_systemtotalcap(item, params, parsed):
 
     systemInfos = parsed["system"]
 
-    allocGB = systemInfos["allocatedCapacityMiB"] / 1024.0
-    totalGB = systemInfos["totalCapacityMiB"] / 1024.0
-    perc = allocGB / totalGB * 100.0
-
-    if perc >= params["levels"][1]:
-        state = 2
-    elif perc >= params["levels"][0]:
-        state = 1
-    elif perc < params["levels"][0]:
-        state = 0
-    else:
-        state = 3
-
-    infotext = "{:.0f}% used ({:.0f} of {:.0f} GB),(levels at {:.2f}/{:.2f}%)".format( perc, allocGB, totalGB, params["levels"][0], params["levels"][1] )
-    perfdata.append( ( "allocatedCapacityMiB", systemInfos["allocatedCapacityMiB"], params["levels"][0], params["levels"][1], 0, systemInfos["totalCapacityMiB"] ) )
-
-    return ( state, infotext, perfdata )
-
-check_info["3par.SystemTotalCapacity"] = {
-    "group"                   : "3par_systotcap",
-    'default_levels_variable':  "filesystem_default_levels",
-    'check_function':           check_3par_systemtotalcap,
-    'inventory_function':       inventory_3par_systemtotalcap,
-    'parse_function':           parse_3par,
-    'service_description':      'Total Capacity',
-    "has_perfdata"        :     True,
-}
-
-
-################################################################################
-# Total failed capacity
-################################################################################
-def inventory_3par_systemfailedcap(parsed):
-    return [ ( "SystemFailedCapacity", {} ) ]
-
-def check_3par_systemfailedcap(item, params, parsed):
-    state       = 3
-    infotext    = "No item implemented"
-    perfdata    = []
-
-    state    = 0                 # TODO: echten State übergeben
-    infotext = ""
-
-    systemInfos = parsed["system"]
-
-    used_mb = systemInfos["failedCapacityMiB"]
-    size_mb = systemInfos["totalCapacityMiB"]
+    used_mb = systemInfos["allocatedCapacityMiB"] * 1.048576
+    size_mb = systemInfos["totalCapacityMiB"] * 1.048576
     used_perc = 100.0 * (float(used_mb) / size_mb)
     size_gb   = size_mb / 1024.0
     used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
@@ -223,6 +178,87 @@ def check_3par_systemfailedcap(item, params, parsed):
             state = 0
 
     #infotext = "{:.0f}% used ({:.1f} of {:.1f} GB),(levels at {:.2f}/{:.2f}%)".format( used_perc, used_hr, size_hr, params["levels"][0], params["levels"][1] )
+    if used_perc > 0:
+        perc_precision = max(1, 2 - int(round(math.log(used_perc, 10))))
+    else:
+        perc_precision = 1
+    
+    infotext += "%%.%df%%%% used (%%s of %%s), %%s" % perc_precision % (used_perc, used_hr, size_hr, levels["levels_text"])
+
+    perfdata.append( ( "allocatedCapacityMiB", systemInfos["allocatedCapacityMiB"], params["levels"][0], params["levels"][1], 0, systemInfos["totalCapacityMiB"] ) )
+
+    return ( state, infotext, perfdata )
+
+check_info["3par.SystemTotalCapacity"] = {
+    "group"                   : "filesystem",
+    'default_levels_variable':  "filesystem_default_levels",
+    'check_function':           check_3par_systemtotalcap,
+    'inventory_function':       inventory_3par_systemtotalcap,
+    'parse_function':           parse_3par,
+    'service_description':      'Total Capacity',
+    "has_perfdata"        :     True,
+}
+
+
+################################################################################
+# Total failed capacity
+################################################################################
+def inventory_3par_systemfailedcap(parsed):
+    return [ ( "SystemFailedCapacity", {} ) ]
+
+def check_3par_systemfailedcap(item, params, parsed):
+    state       = 3
+    infotext    = "No item implemented"
+    perfdata    = []
+
+    state    = 0                 # TODO: echten State übergeben
+    infotext = ""
+
+    systemInfos = parsed["system"]
+
+    used_mb = systemInfos["failedCapacityMiB"] * 1.048576
+    size_mb = systemInfos["totalCapacityMiB"] * 1.048576
+    used_perc = 100.0 * (float(used_mb) / size_mb)
+    size_gb   = size_mb / 1024.0
+    used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
+    size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
+
+    # If both numbers end with both MB or GB or TB, then drop the first one
+    if used_hr[-2:] == size_hr[-2:]:
+        used_hr = used_hr[:-3]
+
+    levels = get_filesystem_levels("bla", "volume", size_gb, params)
+    warn_mb, crit_mb       = levels["levels_mb"]
+
+    #print used_hr
+    #print used_mb
+    #print warn_mb
+    #print crit_mb
+
+    #3.66
+    #3838627.0208
+    #3660.0
+    #4000.0
+
+    if warn_mb <= -1:
+        #Negativ levels, so calculate mb left
+        rest_mb = size_mb - used_mb
+        crit_mb = crit_mb * -1
+        warn_mb = warn_mb * -1
+        if rest_mb <= crit_mb:
+            state = 2
+        elif rest_mb <= warn_mb:
+            state = max(1, state)
+        else:
+            state = 0
+    else:
+        if used_mb >= crit_mb:
+            state = 2
+        elif used_mb >= warn_mb:
+            state = max(1, state)
+        else:
+            state = 0
+
     if used_perc > 0:
         perc_precision = max(1, 2 - int(round(math.log(used_perc, 10))))
     else:
@@ -346,8 +382,8 @@ def check_3par_cpgs(item, params, parsed):
         if item == cpg["name"]:
             totalVVs = ( cpg["numFPVVs"] + cpg["numTDVVs"] + cpg["numTPVVs"] )
 
-            used_mb = cpg["UsrUsage"]["usedMiB"]
-            size_mb = cpg["UsrUsage"]["totalMiB"]
+            used_mb = cpg["UsrUsage"]["usedMiB"] * 1.048576
+            size_mb = cpg["UsrUsage"]["totalMiB"] * 1.048576
             used_perc = 100.0 * (float(used_mb) / size_mb)
             size_gb   = size_mb / 1024.0
             used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
@@ -552,8 +588,8 @@ def check_3par_vols(item, params, parsed):
 
             vstate = vol["state"] - 1
 
-            used_mb = vol["userSpace"]["usedMiB"]
-            size_mb = vol["sizeMiB"]
+            used_mb = vol["userSpace"]["usedMiB"] * 1.048576
+            size_mb = vol["sizeMiB"] * 1.048576
             used_perc = 100.0 * (float(used_mb) / size_mb)
             size_gb   = size_mb / 1024.0
             used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
