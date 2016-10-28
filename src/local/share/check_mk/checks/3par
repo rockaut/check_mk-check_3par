@@ -82,6 +82,25 @@ def parse_3par(info):
     parsed = json.loads(b)
     return parsed
 
+def get_vlunstats_data_host( parsed, host ):
+
+    if "sysrep_vlunstatistics" not in parsed:
+        return {}
+
+    if "members" not in parsed["sysrep_vlunstatistics"]:
+        return {}
+
+    data = []
+
+    for entry in parsed["sysrep_vlunstatistics"]["members"]:
+        if "hostname" not in entry:
+            continue
+
+        if entry["hostname"] == host:
+            data.append( entry )
+
+    return data
+
 ################################################################################
 #    _____           _                 
 #  / ____|         | |                
@@ -309,6 +328,8 @@ def check_3par_hosts(item, params, parsed):
     if "hosts" not in parsed:
         return ( state, infotext, perfdata )
 
+    statsdata = get_vlunstats_data_host( parsed, "GGESX0809")
+    
     for host in parsed["hosts"]["members"]:
         if item == host["name"]:
             infotext = "Host: %s" % ( host["name"] )
@@ -317,6 +338,26 @@ def check_3par_hosts(item, params, parsed):
             portCount = get_hostports_state( item, params, parsed )
 
             infotext += " on %s Ports" % ( portCount )
+
+            # TODO: levels
+            # TODO: _min, _avg, IOSizeKB
+
+            serviceTimeMS_total_max = 0
+            IO_total_sum            = 0
+            KBytes_total_sum        = 0
+            queueLength_sum         = 0
+
+            if len(statsdata) > 0:
+                for entry in statsdata: 
+                    serviceTimeMS_total_max = max( entry["serviceTimeMS"]["total"], serviceTimeMS_total_max )
+                    IO_total_sum += entry["IO"]["total"]
+                    KBytes_total_sum += entry["KBytes"]["total"]
+                    queueLength_sum += entry["queueLength"]
+
+                perfdata.append( ( "serviceTimeMS_total_max", serviceTimeMS_total_max ) )
+                perfdata.append( ( "IO_total_sum", IO_total_sum ) )
+                perfdata.append( ( "KBytes_total_sum", KBytes_total_sum ) )
+                perfdata.append( ( "queueLength_sum", queueLength_sum ) )
 
             return ( state, infotext, perfdata )
 
