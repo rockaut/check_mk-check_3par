@@ -328,7 +328,7 @@ def check_3par_hosts(item, params, parsed):
     if "hosts" not in parsed:
         return ( state, infotext, perfdata )
 
-    statsdata = get_vlunstats_data_host( parsed, "GGESX0809")
+    statsdata = get_vlunstats_data_host( parsed, item )
     
     for host in parsed["hosts"]["members"]:
         if item == host["name"]:
