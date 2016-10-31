@@ -816,6 +816,7 @@ def check_3par_ports(item, params, parsed):
             if portPos != "" and "sysrep_portstatistics" in parsed:
                 stats = get_sysrepstats_port( portPos, parsed )
                 if 'serviceTimeMS' in stats:
+                    infotext += " - %s ms" % ( stats["serviceTimeMS"]["total"] )
                     perfdata.append( ( "serviceTimeMS_read", stats["serviceTimeMS"]["read"] ) )
                     perfdata.append( ( "serviceTimeMS_write", stats["serviceTimeMS"]["write"] ) )
                     perfdata.append( ( "serviceTimeMS_total", stats["serviceTimeMS"]["total"] ) )
