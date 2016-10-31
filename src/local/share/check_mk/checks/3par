@@ -601,14 +601,21 @@ def get_sysrep_vlunstatistics(vlun, parsed):
     IO_read  = 0
     IO_write = 0
     IO_total = 0
+    serviceTimeMS_read_max = 0
+    serviceTimeMS_write_max = 0
+    serviceTimeMS_total_max = 0
 
     for member in stats:
         IO_read  += stats[member]["IO"]["read"]
         IO_write += stats[member]["IO"]["write"]
         IO_total += stats[member]["IO"]["total"]
+        serviceTimeMS_read_max  = max( serviceTimeMS_read_max, stats[member]["serviceTimeMS"]["read"] )
+        serviceTimeMS_write_max = max( serviceTimeMS_write_max, stats[member]["serviceTimeMS"]["write"] )
+        serviceTimeMS_total_max = max( serviceTimeMS_total_max, stats[member]["serviceTimeMS"]["total"] )
 
     values = {
-        'IO':   { 'read': IO_read, 'write': IO_write, 'total': IO_total }
+        'IO':   { 'read': IO_read, 'write': IO_write, 'total': IO_total },
+        'serviceTimeMS' : { 'read_max': serviceTimeMS_read_max, 'write_max': serviceTimeMS_write_max, 'total_max': serviceTimeMS_total_max }
     }
 
     return values
@@ -622,12 +629,6 @@ def check_3par_vols(item, params, parsed):
         for vol in parsed["volumes"]["members"]:
             if item != vol["name"]:
                 continue
-
-            if "sysrep_vlunstatistics" in parsed:
-                stats = get_sysrep_vlunstatistics( item, parsed )
-                perfdata.append( ( "IO_read", stats['IO']['read'] ) )
-                perfdata.append( ( "IO_write", stats['IO']['write'] ) )
-                perfdata.append( ( "IO_total", stats['IO']['total'] ) )
 
             vstate = vol["state"] - 1
 
@@ -691,6 +692,18 @@ def check_3par_vols(item, params, parsed):
 
             perfdata.append( ( "UsrUsedMiB", vol["userSpace"]["usedMiB"], warn_mb, crit_mb, vol["sizeMiB"] ) )
             perfdata.append( ( "Compaction", vol["capacityEfficiency"]["compaction"], warn_grade, crit_grade ) )
+
+            if "sysrep_vlunstatistics" in parsed:
+                stats = get_sysrep_vlunstatistics( item, parsed )
+
+                infotext += " - max. %s ms" % ( stats['serviceTimeMS']['read_max'] )
+
+                perfdata.append( ( "IO_read", stats['IO']['read'] ) )
+                perfdata.append( ( "IO_write", stats['IO']['write'] ) )
+                perfdata.append( ( "IO_total", stats['IO']['total'] ) )
+                perfdata.append( ( "serviceTimeMS_read_max", stats['serviceTimeMS']['read_max'] ) )
+                perfdata.append( ( "serviceTimeMS_write_max", stats['serviceTimeMS']['write_max'] ) )
+                perfdata.append( ( "serviceTimeMS_total_max", stats['serviceTimeMS']['total_max'] ) )
 
             return ( state, infotext, perfdata )
 
