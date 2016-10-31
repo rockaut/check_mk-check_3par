@@ -196,8 +196,72 @@ def get_flashcache( sessionKey, sessionHost, sessionPort = 8080 ):
 
     return parsed_response
 
+def get_remotecopygroups( sessionKey, sessionHost, sessionPort = 8080 ):
+    qUrl = '/api/v1/remotecopygroups'
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPSConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", qUrl, "", apiHeaders)
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+
 def get_sysrep_cachememorystatistics( sessionKey, sessionHost, sessionPort = 8080 ):
     qUrl = '/api/v1/systemreporter/attime/cachememorystatistics/hires'
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPSConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", qUrl, "", apiHeaders)
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+
+def get_sysrep_cpgstatistics( sessionKey, sessionHost, sessionPort = 8080 ):
+    qUrl = '/api/v1/systemreporter/attime/cpgstatistics/hires'
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPSConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", qUrl, "", apiHeaders)
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+
+def get_sysrep_physicaldiskcapacity( sessionKey, sessionHost, sessionPort = 8080 ):
+    qUrl = '/api/v1/systemreporter/attime/physicaldiskcapacity/hires'
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPSConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", qUrl, "", apiHeaders)
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+
+def get_sysrep_physicaldiskspacedata( sessionKey, sessionHost, sessionPort = 8080 ):
+    qUrl = '/api/v1/systemreporter/attime/physicaldiskspacedata/hires'
     apiHeaders = build_apiHeaders( sessionKey )
 
     conn = httplib.HTTPSConnection( sessionHost, sessionPort, timeout=10)
@@ -343,7 +407,28 @@ def main( argv ):
 
         flashcache = get_flashcache( sessionKey, sessionHost )
         result["flashcache"] = flashcache
+
+        remotecopygroups = get_remotecopygroups( sessionKey, sessionHost )
+        result["remotecopygroups"] = remotecopygroups
+
+        sysrep_cpgstatistics = get_sysrep_cpgstatistics( sessionKey, sessionHost )
+        if "code" in sysrep_cpgstatistics and sysrep_cpgstatistics["code"] == 9:
+            pass
+        else:
+            result["sysrep_cpgstatistics"] = sysrep_cpgstatistics
         
+        sysrep_physicaldiskcapacity = get_sysrep_physicaldiskcapacity( sessionKey, sessionHost )
+        if "code" in sysrep_physicaldiskcapacity and sysrep_physicaldiskcapacity["code"] == 9:
+            pass
+        else:
+            result["sysrep_physicaldiskcapacity"] = sysrep_physicaldiskcapacity
+
+        sysrep_physicaldiskspacedata = get_sysrep_physicaldiskspacedata( sessionKey, sessionHost )
+        if "code" in sysrep_physicaldiskspacedata and sysrep_physicaldiskspacedata["code"] == 9:
+            pass
+        else:
+            result["sysrep_physicaldiskspacedata"] = sysrep_physicaldiskspacedata
+
         sysrep_physicaldiskstatistics = get_sysrep_physicaldiskstatistics( sessionKey, sessionHost )
         if "code" in sysrep_physicaldiskstatistics and sysrep_physicaldiskstatistics["code"] == 9:
             pass
