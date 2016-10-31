@@ -354,6 +354,8 @@ def check_3par_hosts(item, params, parsed):
                     KBytes_total_sum += entry["KBytes"]["total"]
                     queueLength_sum += entry["queueLength"]
 
+                infotext += " - max %s ms" % ( serviceTimeMS_total_max )
+
                 perfdata.append( ( "serviceTimeMS_total_max", serviceTimeMS_total_max ) )
                 perfdata.append( ( "IO_total_sum", IO_total_sum ) )
                 perfdata.append( ( "KBytes_total_sum", KBytes_total_sum ) )
