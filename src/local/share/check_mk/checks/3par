@@ -1042,6 +1042,7 @@ factory_settings["hp3par_physicaldisks_default_levels"] = {
     "pdCountLevels":     ( 2, 1 ),
     "lifeLeftPctLevels": ( 50, 30 ),
     "tempLevels":        ( 35, 40 ),
+    "busyPctLevels":     ( 60, 70 ),
 }
 
 hp3par_pdType = {
@@ -1071,7 +1072,6 @@ def inventory_3par_physicaldisks(parsed):
         for pd in parsed["sysrep_physicaldiskcapacity"]["members"]:
             typeCount[pd["type"]] += 1            
 
-
     if typeCount[1] > 0:
         inventory.append( ( "PD Summary - FC", None ) )
 
@@ -1098,6 +1098,10 @@ def check_3par_physicaldisks(item, params, parsed):
     temp_max = 0
     temp_sum = 0
 
+    busyPct_min = 100
+    busyPct_max = 0
+    busyPct_sum = 0
+
     if item == "PD Summary - FC":
         pd_type = 1
     if item == "PD Summary - NL":
@@ -1112,8 +1116,16 @@ def check_3par_physicaldisks(item, params, parsed):
             if pd["type"] != pd_type:
                 continue
             pd_count += 1
-            perfdata.append( ( "pd_count", pd_count ) )
-            infotext = "%s disks present" % ( pd_count )
+
+        if pd_count <= params["pdCountLevels"][1]:
+            state = max( state, 2 )
+        elif pd_count <= params["pdCountLevels"][0]:
+            state = max( state, 1 )
+        else:
+            state = max( state, 0 )
+
+        perfdata.append( ( "pd_count", pd_count ) )
+        infotext = "%s disks present" % ( pd_count )
 
     if "sysrep_physicaldiskspacedata" in parsed:
         for pd in parsed["sysrep_physicaldiskspacedata"]["members"]:
@@ -1133,25 +1145,63 @@ def check_3par_physicaldisks(item, params, parsed):
             lifeLeftPct_sum += pd["lifeLeftPct"]
 
         temp_avg = temp_sum / pd_count
+
+        if temp_max >= params["tempLevels"][1]:
+            state = max( state, 2 )
+            infotext += " - max. %s°C (!!)" % ( temp_max )
+        elif temp_max >= params["tempLevels"][0]:
+            state = max( state, 1 )
+            infotext += " - max. %s°C (!)" % ( temp_max )
+        else:
+            state = max( state, 0 )
+            infotext += " - max. %s°C" % ( temp_max )
+
         perfdata.append( ( "temp_min", temp_min ) )
         perfdata.append( ( "temp_max", temp_max, params["tempLevels"][0], params["tempLevels"][1] ) )
         perfdata.append( ( "temp_avg", temp_avg ) )
-        infotext += " - max. %s°C" % ( temp_max )
 
         # only SSD shows wear gauge
         if pd_type == 3:
             lifeLeftPct_avg = lifeLeftPct_sum / pd_count
+
+            if lifeLeftPct_min <= params["lifeLeftPctLevels"][1]:
+                state = max( state, 2 )
+                infotext += " - min. %s%% life left (!!)" % ( lifeLeftPct_min )
+            elif lifeLeftPct_min <= params["lifeLeftPctLevels"][0]:
+                state = max( state, 1 )
+                infotext += " - min. %s%% life left (!)" % ( lifeLeftPct_min )
+            else:
+                state = max( state, 0 )
+                infotext += " - min. %s%% life left" % ( lifeLeftPct_min )
+            
             perfdata.append( ( "lifeLeftPct_min", lifeLeftPct_min, params["lifeLeftPctLevels"][0], params["lifeLeftPctLevels"][1], 0, 100 ) )
             perfdata.append( ( "lifeLeftPct_max", lifeLeftPct_max, 0, 0, 0, 100 ) )
             perfdata.append( ( "lifeLeftPct_avg", lifeLeftPct_avg, 0, 0, 0, 100 ) )
-            infotext += " - min. %s%% life left" % ( lifeLeftPct_min )
 
-    if pd_count <= params["pdCountLevels"][1]:
-        state = max( state, 2 )
-    elif pd_count <= params["pdCountLevels"][0]:
-        state = max( state, 1 )
-    else:
-        state = max( state, 0 )
+    if "sysrep_physicaldiskstatistics" in parsed:
+        for pd in parsed["sysrep_physicaldiskstatistics"]["members"]:
+            if pd["type"] != pd_type:
+                continue
+
+            busyPct_min = min( busyPct_min, pd["busyPct"] )
+            busyPct_max = max( busyPct_max, pd["busyPct"] )
+            busyPct_sum += pd["busyPct"]
+
+        busyPct_avg = busyPct_sum / pd_count
+
+        if busyPct_max >= params["busyPctLevels"][1]:
+            state = max( state, 2 )
+            infotext += " - max. %s%% busy (!!)" % ( busyPct_max )
+        elif busyPct_max >= params["busyPctLevels"][0]:
+            state = max( state, 1 )
+            infotext += " - max. %s%% busy (!)" % ( busyPct_max )
+        else:
+            state = max( state, 0 )
+            infotext += " - max. %s%% busy" % ( busyPct_max )
+
+        perfdata.append( ( "busyPct_min", busyPct_min, 0, 0, 0, 100 ) )
+        perfdata.append( ( "busyPct_max", busyPct_max, params["busyPctLevels"][0], params["busyPctLevels"][1], 0, 100 ) )
+        perfdata.append( ( "busyPct_avg", busyPct_avg, 0, 0, 0, 100 ) )
 
     if state == -1:
         state = 3
