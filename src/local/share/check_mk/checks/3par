@@ -1044,6 +1044,7 @@ factory_settings["hp3par_physicaldisks_default_levels"] = {
     "tempLevels":        ( 35, 40 ),
     "busyPctLevels":     ( 80, 90 ),
     "queueLengthLevels": ( 100, 150 ),
+    "serviceTimeMSLevels": ( 10, 15 ),
 }
 
 hp3par_pdType = {
@@ -1106,6 +1107,10 @@ def check_3par_physicaldisks(item, params, parsed):
     queueLength_min = 9999
     queueLength_max = 0
     queueLength_sum = 0
+
+    serviceTimeMS_total_min = 9999
+    serviceTimeMS_total_max = 0
+    serviceTimeMS_total_sum = 0
 
     if item == "PD Summary - FC":
         pd_type = 1
@@ -1196,8 +1201,13 @@ def check_3par_physicaldisks(item, params, parsed):
             queueLength_max = max( queueLength_max, pd["queueLength"] )
             queueLength_sum += pd["queueLength"]
 
+            serviceTimeMS_total_min = min( serviceTimeMS_total_min, pd["serviceTimeMS"]["total"] )
+            serviceTimeMS_total_max = max( serviceTimeMS_total_max, pd["serviceTimeMS"]["total"] )
+            serviceTimeMS_total_sum = pd["serviceTimeMS"]["total"]
+
         busyPct_avg     = busyPct_sum / pd_count
         queueLength_avg = queueLength_sum / pd_count
+        serviceTimeMS_total_avg = serviceTimeMS_total_sum / pd_count
 
         if busyPct_max >= params["busyPctLevels"][1]:
             state = max( state, 2 )
@@ -1219,6 +1229,16 @@ def check_3par_physicaldisks(item, params, parsed):
             state = max( state, 0 )
             infotext += " - max. %s Queue" % ( queueLength_max )
 
+        if serviceTimeMS_total_max >= params["serviceTimeMSLevels"][1]:
+            state = max( state, 2 )
+            infotext += " - max. %s ms (!!)" % ( serviceTimeMS_total_max )
+        elif serviceTimeMS_total_max >= params["serviceTimeMSLevels"][0]:
+            state = max( state, 1 )
+            infotext += " - max. %s ms (!)" % ( serviceTimeMS_total_max )
+        else:
+            state = max( state, 0 )
+            infotext += " - max. %s ms" % ( serviceTimeMS_total_max )
+
         perfdata.append( ( "busyPct_min", busyPct_min, 0, 0, 0, 100 ) )
         perfdata.append( ( "busyPct_max", busyPct_max, params["busyPctLevels"][0], params["busyPctLevels"][1], 0, 100 ) )
         perfdata.append( ( "busyPct_avg", busyPct_avg, 0, 0, 0, 100 ) )
@@ -1226,6 +1246,10 @@ def check_3par_physicaldisks(item, params, parsed):
         perfdata.append( ( "queueLength_min", queueLength_min, 0, 0, 0, 100 ) )
         perfdata.append( ( "queueLength_max", queueLength_max, params["queueLengthLevels"][0], params["queueLengthLevels"][1], 0, 100 ) )
         perfdata.append( ( "queueLength_avg", queueLength_avg, 0, 0, 0, 100 ) )
+
+        perfdata.append( ( "serviceTimeMS_total_min", serviceTimeMS_total_min, 0, 0, 0, 100 ) )
+        perfdata.append( ( "serviceTimeMS_total_max", serviceTimeMS_total_max, params["serviceTimeMSLevels"][0], params["serviceTimeMSLevels"][1], 0, 100 ) )
+        perfdata.append( ( "serviceTimeMS_total_avg", serviceTimeMS_total_avg, 0, 0, 0, 100 ) )
 
     if state == -1:
         state = 3
