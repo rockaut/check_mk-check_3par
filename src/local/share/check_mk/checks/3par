@@ -1039,7 +1039,9 @@ check_info["3par.remotecopygroups"] = {
 
 hp3par_physicaldisks_default_levels = {}
 factory_settings["hp3par_physicaldisks_default_levels"] = {
-    "pdCountLevels": ( 2, 1 )
+    "pdCountLevels":     ( 2, 1 ),
+    "lifeLeftPctLevels": ( 50, 30 ),
+    "tempLevels":        ( 35, 40 ),
 }
 
 hp3par_pdType = {
@@ -1083,27 +1085,73 @@ def inventory_3par_physicaldisks(parsed):
 
 def check_3par_physicaldisks(item, params, parsed):
     state    = -1
-    infotext = "not implemented - "
+    infotext = "not implemented"
     perfdata = []
 
     pd_count = 0
 
+    lifeLeftPct_min = 100
+    lifeLeftPct_max = 0
+    lifeLeftPct_sum = 0
+
+    temp_min = 999
+    temp_max = 0
+    temp_sum = 0
+
+    if item == "PD Summary - FC":
+        pd_type = 1
+    if item == "PD Summary - NL":
+        pd_type = 2
+    if item == "PD Summary - SSD":
+        pd_type = 3
+
+    # Todo: failed capacity
+
     if "sysrep_physicaldiskcapacity" in parsed:
-        
-        pd_count = len(parsed["sysrep_physicaldiskcapacity"]["members"])
-        perfdata.append( ( "pd_count", pd_count ) )
-        infotext = "%s disks present" % ( pd_count )
-
-        if pd_count <= params["pdCountLevels"][1]:
-            state = max( state, 2 )
-        elif pd_count <= params["pdCountLevels"][0]:
-            state = max( state, 1 )
-        else:
-            state = max( state, 0 )
-
         for pd in parsed["sysrep_physicaldiskcapacity"]["members"]:
-            pass
-            # end name == item
+            if pd["type"] != pd_type:
+                continue
+            pd_count += 1
+            perfdata.append( ( "pd_count", pd_count ) )
+            infotext = "%s disks present" % ( pd_count )
+
+    if "sysrep_physicaldiskspacedata" in parsed:
+        for pd in parsed["sysrep_physicaldiskspacedata"]["members"]:
+            if pd["type"] != pd_type:
+                continue
+
+            temp_min = min( temp_min, pd["temperatureC"] )
+            temp_max = max( temp_max, pd["temperatureC"] )
+            temp_sum += pd["temperatureC"]
+
+            # only SSD shows wear gauge
+            if pd["type"] != 3:
+                continue
+
+            lifeLeftPct_min = min( lifeLeftPct_min, pd["lifeLeftPct"] )
+            lifeLeftPct_max = max( lifeLeftPct_max, pd["lifeLeftPct"] )
+            lifeLeftPct_sum += pd["lifeLeftPct"]
+
+        temp_avg = temp_sum / pd_count
+        perfdata.append( ( "temp_min", temp_min ) )
+        perfdata.append( ( "temp_max", temp_max, params["tempLevels"][0], params["tempLevels"][1] ) )
+        perfdata.append( ( "temp_avg", temp_avg ) )
+        infotext += " - max. %s°C" % ( temp_max )
+
+        # only SSD shows wear gauge
+        if pd_type == 3:
+            lifeLeftPct_avg = lifeLeftPct_sum / pd_count
+            perfdata.append( ( "lifeLeftPct_min", lifeLeftPct_min, params["lifeLeftPctLevels"][0], params["lifeLeftPctLevels"][1], 0, 100 ) )
+            perfdata.append( ( "lifeLeftPct_max", lifeLeftPct_max, 0, 0, 0, 100 ) )
+            perfdata.append( ( "lifeLeftPct_avg", lifeLeftPct_avg, 0, 0, 0, 100 ) )
+            infotext += " - min. %s%% life left" % ( lifeLeftPct_min )
+
+    if pd_count <= params["pdCountLevels"][1]:
+        state = max( state, 2 )
+    elif pd_count <= params["pdCountLevels"][0]:
+        state = max( state, 1 )
+    else:
+        state = max( state, 0 )
 
     if state == -1:
         state = 3
