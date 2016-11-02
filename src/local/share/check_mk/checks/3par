@@ -1042,7 +1042,7 @@ factory_settings["hp3par_physicaldisks_default_levels"] = {
     "pdCountLevels":     ( 2, 1 ),
     "lifeLeftPctLevels": ( 50, 30 ),
     "tempLevels":        ( 35, 40 ),
-    "busyPctLevels":     ( 60, 70 ),
+    "busyPctLevels":     ( 80, 90 ),
 }
 
 hp3par_pdType = {
