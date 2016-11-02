@@ -1030,3 +1030,91 @@ check_info["3par.remotecopygroups"] = {
     "has_perfdata"        :     True,
     'group':                    '3par_remotecopygroups',
 }
+
+##############################################
+#
+#   Physical Disks
+# 
+##############################################
+
+hp3par_physicaldisks_default_levels = {}
+factory_settings["hp3par_physicaldisks_default_levels"] = {
+    "pdCountLevels": ( 2, 1 )
+}
+
+hp3par_pdType = {
+    1: "FC",
+    2: "NL",
+    3: "SSD",
+}
+
+def get_hp3par_pdType_desc( id ):
+    result = "Unknown"
+
+    if id in hp3par_pdType:
+        return hp3par_pdType[id]
+
+    return result
+
+def inventory_3par_physicaldisks(parsed):
+    inventory = []
+
+    typeCount = {
+        1: 0,
+        2: 0,
+        3: 0,
+    }
+
+    if "sysrep_physicaldiskcapacity" in parsed:
+        for pd in parsed["sysrep_physicaldiskcapacity"]["members"]:
+            typeCount[pd["type"]] += 1            
+
+
+    if typeCount[1] > 0:
+        inventory.append( ( "PD Summary - FC", None ) )
+
+    if typeCount[2] > 0:
+        inventory.append( ( "PD Summary - NL", None ) )
+
+    if typeCount[3] > 0:
+        inventory.append( ( "PD Summary - SSD", None ) )
+
+    return inventory
+
+def check_3par_physicaldisks(item, params, parsed):
+    state    = -1
+    infotext = "not implemented - "
+    perfdata = []
+
+    pd_count = 0
+
+    if "sysrep_physicaldiskcapacity" in parsed:
+        
+        pd_count = len(parsed["sysrep_physicaldiskcapacity"]["members"])
+        perfdata.append( ( "pd_count", pd_count ) )
+        infotext = "%s disks present" % ( pd_count )
+
+        if pd_count <= params["pdCountLevels"][1]:
+            state = max( state, 2 )
+        elif pd_count <= params["pdCountLevels"][0]:
+            state = max( state, 1 )
+        else:
+            state = max( state, 0 )
+
+        for pd in parsed["sysrep_physicaldiskcapacity"]["members"]:
+            pass
+            # end name == item
+
+    if state == -1:
+        state = 3
+    return ( state, infotext, perfdata )
+
+check_info["3par.physicaldisks"] = {
+    'default_levels_variable':  "hp3par_physicaldisks_default_levels",
+    'check_function':           check_3par_physicaldisks,
+    'inventory_function':       inventory_3par_physicaldisks,
+    'parse_function':           parse_3par,
+    'service_description':      '%s',
+    "has_perfdata"        :     True,
+    'group':                    '3par_physicaldisks',
+}
