@@ -865,3 +865,168 @@ check_info["3par.ports"] = {
     "has_perfdata"        :     True,
     'group':                    '3par_ports',
 }
+
+
+
+
+##############################################
+#
+#   Remote Copy Groups
+# 
+##############################################
+
+hp3par_rcopyGroupStateEnum = {
+    1 : "new",
+    2 : "starting",
+    3 : "started",
+    4 : "restart",
+    5 : "stopped",
+    6 : "backup",
+    7 : "failsave",
+    8 : "unknown",
+    9 : "logging",
+}
+
+hp3par_rcopyGroupModeEnum = {
+    1 : "sync",
+    2 : "periodic",
+    3 : "periodic",
+    4 : "async",
+}
+
+hp3par_rcopyGroupVVStatusEnum =  {
+    1 : "new",
+    2 : "syncing",
+    3 : "synced",
+    4 : "unsync",
+    5 : "stale",
+    6 : "newpresynced",
+    7 : "newsyncedfromsnap",
+    8 : "stopped",
+    9 : "failsave",
+    10 : "unknown",
+    11 : "logging",
+}
+
+hp3par_rcopyGroupState_default_levels = {}
+factory_settings["hp3par_rcopyGroupState_default_levels"] = {
+    "groupState" : {
+        1 : 0,
+        2 : 0,
+        3 : 0,
+        4 : 1,
+        5 : 1,
+        6 : 0,
+        7 : 2,
+        8 : 2,
+        9 : 1,
+    },
+    "groupMode" : {
+        1  : 0,
+        2  : 1,
+        3  : 0,
+        4  : 0
+    },
+    "remoteVolumesSyncStatus" : {
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 1,
+        5: 1,
+        6: 0,
+        7: 0,
+        8: 1,
+        9: 2,
+        10: 2,
+        11: 1,
+    },
+    "roleReversed": False,
+}
+
+
+def get_hp3par_rcopyGroupStateEnum_desc( id ):
+    result = 8
+
+    if id in hp3par_rcopyGroupStateEnum:
+        return hp3par_rcopyGroupStateEnum[id]
+
+    return result
+
+def get_hp3par_rcopyGroupModeEnum_desc( id ):
+    result = 8
+
+    if id in hp3par_rcopyGroupModeEnum:
+        return hp3par_rcopyGroupModeEnum[id]
+
+    return result
+
+def get_hp3par_rcopyGroupVVStatusEnum_desc( id ):
+    result = 8
+
+    if id in hp3par_rcopyGroupVVStatusEnum:
+        return hp3par_rcopyGroupVVStatusEnum[id]
+
+    return result
+
+def inventory_3par_remotecopygroups(parsed):
+    inventory = []
+
+    if "remotecopygroups" in parsed:
+        for rcgroup in parsed["remotecopygroups"]["members"]:
+            if "name" in rcgroup:
+                inventory.append( ( rcgroup["name"], None ) )
+
+    return inventory
+
+def check_3par_remotecopygroups(item, params, parsed):
+    state    = -1
+    infotext = "not implemented - "
+    perfdata = []
+
+    if "remotecopygroups" in parsed:
+        for rcgroup in parsed["remotecopygroups"]["members"]:
+            if "name" in rcgroup and rcgroup["name"] == item:
+                if rcgroup["role"] == 1:
+                    infotext += "Primary"
+                else:
+                    infotext += "Secondary"
+
+                if "targets" in rcgroup:
+                    #Todo: handle multiple targets
+                    #Todo: handle Policies
+                    for rctarget in rcgroup["targets"]:
+                        if "state" in rctarget:
+                            infotext += " - %s" % ( get_hp3par_rcopyGroupStateEnum_desc( rctarget["state"] ) )
+                            state = max( state, params["groupState"][rctarget["state"]] )
+                        if "mode" in rctarget:
+                            infotext += " - %s" % ( get_hp3par_rcopyGroupModeEnum_desc( rctarget["mode"] ) )
+                            state = max( state, params["groupMode"][rctarget["mode"]] )
+                        if rctarget["roleReversed"] is not params["roleReversed"]:
+                            infotext += " - roleReversed is %s (!!)" % ( rctarget["roleReversed"] )
+                            state = max( state, 2 )
+
+                if "volumes" in rcgroup:
+                    #Todo: handle multiple volumes
+                    #Todo: handle last volumes
+                    for rcgroupVolume in rcgroup["volumes"]:
+                        if "remoteVolumes" in rcgroupVolume:
+                            for remoteVolume in rcgroupVolume["remoteVolumes"]:
+                                if "syncStatus" in remoteVolume:
+                                    state = max( state, params["remoteVolumesSyncStatus"][remoteVolume["syncStatus"]])
+                                    if params["remoteVolumesSyncStatus"][remoteVolume["syncStatus"]] != 0:
+                                        infotext += " - Volumes are %s" % ( get_hp3par_rcopyGroupVVStatusEnum_desc( remoteVolume["syncStatus"] ) )
+            # end name == item
+
+    if state == -1:
+        state = 3
+    return ( state, infotext, perfdata )
+
+check_info["3par.remotecopygroups"] = {
+    'default_levels_variable':  "hp3par_rcopyGroupState_default_levels",
+    'check_function':           check_3par_remotecopygroups,
+    'inventory_function':       inventory_3par_remotecopygroups,
+    'parse_function':           parse_3par,
+    'service_description':      'RCG - %s',
+    "has_perfdata"        :     True,
+    'group':                    '3par_remotecopygroups',
+}
