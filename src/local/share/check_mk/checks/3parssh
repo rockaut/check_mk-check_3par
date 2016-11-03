@@ -75,15 +75,10 @@ threepar_node_cpu_default_levels = { "levels": (20.0, 10.0) }
 factory_settings["threepar_node_cpu_default_levels"] = { "levels": (20.0, 10.0) }
 
 def inventory_3parstatcpu(parsed):
-    inventory = []
+    if "statcpu" not in parsed:
+        return []
 
-    data = parsed["statcpu"]
-
-    for node in data[3:]:
-        nodeid = "CPU Node %s" % ( node[0].split(",")[0] )
-        inventory += [ ( nodeid, {} ) ]
-
-    return inventory
+    return [ ( "CPU Stats", {} ) ]
 
 def check_3parstatcpu(item, params, parsed):
     state       = 3
@@ -92,32 +87,34 @@ def check_3parstatcpu(item, params, parsed):
 
     data = parsed["statcpu"]
 
+    idle_total = 0
+
     for nodeInfos in data[3:]:
         node = nodeInfos[0].split(",")[0]
-        if item != ( "CPU Node %s" % ( node ) ):
-            continue
 
         desc, user, sys, idle, intr, ctxt = nodeInfos[0].split()
 
         warn, crit = params["levels"]
         
-        perfdata.append( ( "user", user ) )
-        perfdata.append( ( "sys", sys ) )
-        perfdata.append( ( "idle", idle ) )
-        perfdata.append( ( "intr", intr ) )
-        perfdata.append( ( "ctxt", ctxt ) )
+        perfdata.append( ( ( "user_n%s" % ( node ) ), user ) )
+        perfdata.append( ( ( "sys_n%s" % ( node ) ), sys ) )
+        perfdata.append( ( ( "idle_n%s" % ( node ) ), idle ) )
+        perfdata.append( ( ( "intr_n%s" % ( node ) ), intr ) )
+        perfdata.append( ( ( "ctxt_n%s" % ( node ) ), ctxt ) )
 
-        utilized = 100-int(idle)
+        idle_total += int(idle)
 
-        if utilized >= crit:
-            state = max( state, 2 )
-        elif utilized >= warn:
-            state = max( state, 1 )
-        else:
-            state = 0
+    utilized = 100 - ( idle_total * 0.5 )
 
-        infotext = "Node %s is %s%% utilized (%s%% idle)" % ( node, utilized, idle )
+    if utilized >= crit:
+        state = max( state, 2 )
+    elif utilized >= warn:
+        state = max( state, 1 )
+    else:
         state = 0
+
+    infotext = "%s%% utilized (%s%% idle)" % ( utilized, ( idle_total * 0.5 ) )
+    state = 0
 
     if infotext == "":
         infotext = "No item implemented"
