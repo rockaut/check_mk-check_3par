@@ -1164,7 +1164,6 @@ def check_3par_physicaldisks(item, params, parsed):
             infotext += " - max. %s°C (!)" % ( temp_max )
         else:
             state = max( state, 0 )
-            infotext += " - max. %s°C" % ( temp_max )
 
         perfdata.append( ( "temp_min", temp_min ) )
         perfdata.append( ( "temp_max", temp_max, params["tempLevels"][0], params["tempLevels"][1] ) )
@@ -1182,7 +1181,6 @@ def check_3par_physicaldisks(item, params, parsed):
                 infotext += " - min. %s%% life left (!)" % ( lifeLeftPct_min )
             else:
                 state = max( state, 0 )
-                infotext += " - min. %s%% life left" % ( lifeLeftPct_min )
             
             perfdata.append( ( "lifeLeftPct_min", lifeLeftPct_min, params["lifeLeftPctLevels"][0], params["lifeLeftPctLevels"][1], 0, 100 ) )
             perfdata.append( ( "lifeLeftPct_max", lifeLeftPct_max, 0, 0, 0, 100 ) )
@@ -1217,7 +1215,6 @@ def check_3par_physicaldisks(item, params, parsed):
             infotext += " - max. %s%% busy (!)" % ( busyPct_max )
         else:
             state = max( state, 0 )
-            infotext += " - max. %s%% busy" % ( busyPct_max )
 
         if queueLength_max >= params["queueLengthLevels"][1]:
             state = max( state, 2 )
@@ -1227,7 +1224,6 @@ def check_3par_physicaldisks(item, params, parsed):
             infotext += " - max. %s Queue (!)" % ( queueLength_max )
         else:
             state = max( state, 0 )
-            infotext += " - max. %s Queue" % ( queueLength_max )
 
         if serviceTimeMS_total_max >= params["serviceTimeMSLevels"][1]:
             state = max( state, 2 )
