@@ -1043,7 +1043,7 @@ factory_settings["hp3par_physicaldisks_default_levels"] = {
     "lifeLeftPctLevels": ( 50, 30 ),
     "tempLevels":        ( 35, 40 ),
     "busyPctLevels":     ( 80, 90 ),
-    "queueLengthLevels": ( 100, 150 ),
+    "queueLengthLevels": ( 200, 350 ),
     "serviceTimeMSLevels": ( 10, 15 ),
 }
 

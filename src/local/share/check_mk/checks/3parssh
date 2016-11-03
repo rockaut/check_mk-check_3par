@@ -98,7 +98,7 @@ def check_3parstatcpu(item, params, parsed):
         
         perfdata.append( ( ( "user_n%s" % ( node ) ), user ) )
         perfdata.append( ( ( "sys_n%s" % ( node ) ), sys ) )
-        perfdata.append( ( ( "idle_n%s" % ( node ) ), idle ) )
+        perfdata.append( ( ( "idle_n%s" % ( node ) ), idle, warn, crit, 0, 100 ) )
         perfdata.append( ( ( "intr_n%s" % ( node ) ), intr ) )
         perfdata.append( ( ( "ctxt_n%s" % ( node ) ), ctxt ) )
 
