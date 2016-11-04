@@ -312,6 +312,7 @@ check_info["3par.SystemFailedCapacity"] = {
 
 hp3par_hosts_default_levels = {}
 factory_settings["hp3par_hosts_default_levels"] = {
+    "hostPortLevels": ( 3, 2 ),
     "serviceTimeMSLevels": ( 10, 15 ),
 }
 
@@ -342,8 +343,14 @@ def check_3par_hosts(item, params, parsed):
             state = 0
 
             portCount = get_hostports_state( item, params, parsed )
-
-            infotext = "On %s Ports" % ( portCount )
+            if portCount <= params["hostPortLevels"][1]:
+                state = max( state, 2 )
+                infotext = "Only %s Ports (!!)" % ( portCount )
+            elif portCount <= params["hostPortLevels"][0]:
+                state = max( state, 1 )
+                infotext = "Only %s Ports (!)" % ( portCount )
+            else:
+                infotext = "%s Ports" % ( portCount )
 
             # TODO: levels
             # TODO: _min, _avg, IOSizeKB
