@@ -313,7 +313,7 @@ check_info["3par.SystemFailedCapacity"] = {
 hp3par_hosts_default_levels = {}
 factory_settings["hp3par_hosts_default_levels"] = {
     "hostPortLevels": ( 3, 2 ),
-    "serviceTimeMSLevels": ( 10, 15 ),
+    "serviceTimeMSLevels": ( 30, 50 ),
 }
 
 
@@ -363,18 +363,18 @@ def check_3par_hosts(item, params, parsed):
             if len(statsdata) > 0:
                 for entry in statsdata: 
                     serviceTimeMS_total_max = max( entry["serviceTimeMS"]["total"], serviceTimeMS_total_max )
-                    if serviceTimeMS_total_max >= params["serviceTimeMSLevels"][1]:
-                        state = max( state, 2 )
-                        infotext += " - max %s ms (!!)" % ( serviceTimeMS_total_max )
-                    elif serviceTimeMS_total_max >= params["serviceTimeMSLevels"][0]:
-                        state = max( state, 1 )
-                        infotext += " - max %s ms (!)" % ( serviceTimeMS_total_max )
-                    else:
-                        state = max( state, 0 )
-
                     IO_total_sum += entry["IO"]["total"]
                     KBytes_total_sum += entry["KBytes"]["total"]
                     queueLength_sum += entry["queueLength"]
+
+                if serviceTimeMS_total_max >= params["serviceTimeMSLevels"][1]:
+                    state = max( state, 2 )
+                    infotext += " - max %s ms (!!)" % ( serviceTimeMS_total_max )
+                elif serviceTimeMS_total_max >= params["serviceTimeMSLevels"][0]:
+                    state = max( state, 1 )
+                    infotext += " - max %s ms (!)" % ( serviceTimeMS_total_max )
+                else:
+                    state = max( state, 0 )
 
                 perfdata.append( ( "serviceTimeMS_total_max", serviceTimeMS_total_max, params["serviceTimeMSLevels"][0], params["serviceTimeMSLevels"][1] ) )
                 perfdata.append( ( "IO_total_sum", IO_total_sum ) )
