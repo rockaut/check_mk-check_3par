@@ -641,8 +641,8 @@ def get_sysrep_vlunstatistics(vlun, parsed):
     return values
 
 def check_3par_vols(item, params, parsed):
-    state       = 3
-    infotext    = "No item implemented"
+    state       = -1
+    infotext    = ""
     perfdata    = []
 
     if "volumes" in parsed:
@@ -674,18 +674,18 @@ def check_3par_vols(item, params, parsed):
                 crit_mb = crit_mb * -1
                 warn_mb = warn_mb * -1
                 if rest_mb <= crit_mb:
-                    state = 2
+                    state = max(2, state)
                 elif rest_mb <= warn_mb:
                     state = max(1, state)
                 else:
-                    state = 0
+                    state = max(0, state)
             else:
                 if used_mb >= crit_mb:
-                    state = 2
+                    state = max(2, state)
                 elif used_mb >= warn_mb:
                     state = max(1, state)
                 else:
-                    state = 0
+                    state = max(0, state)
             if vstate >= levels["volstatus_critical"]:
                 state = max(2, state)
             elif vstate >= levels["volstatus_warning"]:
@@ -726,6 +726,12 @@ def check_3par_vols(item, params, parsed):
                 perfdata.append( ( "serviceTimeMS_total_max", stats['serviceTimeMS']['total_max'] ) )
 
             return ( state, infotext, perfdata )
+
+    if infotext == "" or state < 0:
+        state = 3
+        infotext = "Not implemented"
+
+    return ( state, infotext, perfdata )
 
 check_info["3par.vols"] = {
     'default_levels_variable':  "threepar_volumes_default_levels",
