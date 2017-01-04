@@ -131,7 +131,7 @@ check_info["3par"] = {
 ################################################################################
 
 def inventory_3par_systemtotalcap(parsed):
-    return [ ( "SystemTotalCapacity", {} ) ]
+    return [ ( "Total Capacity", {} ) ]
 
 def check_3par_systemtotalcap(item, params, parsed):
     state       = 3
@@ -167,7 +167,7 @@ check_info["3par.SystemTotalCapacity"] = {
     'check_function':           check_3par_systemtotalcap,
     'inventory_function':       inventory_3par_systemtotalcap,
     'parse_function':           parse_3par,
-    'service_description':      'Total Capacity',
+    'service_description':      '%s',
     "has_perfdata"        :     True,
 }
 
@@ -176,7 +176,7 @@ check_info["3par.SystemTotalCapacity"] = {
 # Total failed capacity
 ################################################################################
 def inventory_3par_systemfailedcap(parsed):
-    return [ ( "SystemFailedCapacity", {} ) ]
+    return [ ( "Total Failed", {} ) ]
 
 def check_3par_systemfailedcap(item, params, parsed):
     state       = 3
@@ -212,7 +212,7 @@ check_info["3par.SystemFailedCapacity"] = {
     'check_function':           check_3par_systemfailedcap,
     'inventory_function':       inventory_3par_systemfailedcap,
     'parse_function':           parse_3par,
-    'service_description':      'Total Failed',
+    'service_description':      '%s',
     "has_perfdata"        :     True,
 }
 
