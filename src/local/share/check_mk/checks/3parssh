@@ -1,0 +1,218 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+
+import simplejson as json
+
+################################################################################
+# __      __        _       _     _      
+# \ \    / /       (_)     | |   | |     
+#  \ \  / /_ _ _ __ _  __ _| |__ | | ___ 
+#   \ \/ / _` | '__| |/ _` | '_ \| |/ _ \
+#    \  / (_| | |  | | (_| | |_) | |  __/
+#     \/ \__,_|_|  |_|\__,_|_.__/|_|\___|
+#                                        
+################################################################################
+
+threepar_default_levels = {}
+factory_settings["threepar_default_levels"] = {}
+
+
+################################################################################
+#   _____                                      
+#  / ____|                                     
+# | |     ___  _ __ ___  _ __ ___   ___  _ __  
+# | |    / _ \| '_ ` _ \| '_ ` _ \ / _ \| '_ \ 
+# | |___| (_) | | | | | | | | | | | (_) | | | |
+#  \_____\___/|_| |_| |_|_| |_| |_|\___/|_| |_|
+#
+################################################################################
+
+def parse_3parssh(info):
+    parsed = {}
+
+    ### statcpu parsing ###
+    indexes = [i for i,x in enumerate(info) if x == ['---statcpu---']]
+    parsed["statcpu"] = info[indexes[0]:indexes[1]]
+
+    ### showcage parsing ###
+    indexes = [i for i,x in enumerate(info) if x == ['---showcage---']]
+    showcageData = info[indexes[0]:indexes[1]]
+    cageIndexes = [i for i,x in enumerate(showcageData) if x[0].lower().startswith('-----------cage detail info for')]
+
+    parsed["showcage"] = {}
+
+    for x in range(0,len(cageIndexes)):
+        cageNum = showcageData[cageIndexes[x]][0].replace('-----------Cage detail info for cage', '').replace(' ---------', '')
+        if x < len(cageIndexes)-1:
+            parsed["showcage"][cageNum] = showcageData[cageIndexes[x]:cageIndexes[x+1]]
+        else:
+            parsed["showcage"][cageNum] = showcageData[cageIndexes[x]:]
+
+    return parsed
+
+
+def parse_3parssh_searchPd( cageData, diskid ):
+    for line in cageData:
+        if diskid.lower() not in line[0].lower():
+            continue
+
+        return line[0]
+
+
+################################################################################
+#    _____           _                 
+#  / ____|         | |                
+# | (___  _   _ ___| |_ ___ _ __ ___  
+#  \___ \| | | / __| __/ _ \ '_ ` _ \ 
+#  ____) | |_| \__ \ ||  __/ | | | | |
+# |_____/ \__, |___/\__\___|_| |_| |_|
+#          __/ |                      
+#         |___/
+#         
+################################################################################
+
+threepar_node_cpu_default_levels = { "levels": (20.0, 10.0) }
+factory_settings["threepar_node_cpu_default_levels"] = { "levels": (20.0, 10.0) }
+
+def inventory_3parstatcpu(parsed):
+    if "statcpu" not in parsed:
+        return []
+
+    return [ ( "CPU Stats", {} ) ]
+
+def check_3parstatcpu(item, params, parsed):
+    state       = 3
+    infotext    = ""
+    perfdata    = []
+
+    data = parsed["statcpu"]
+
+    idle_total = 0
+
+    for nodeInfos in data[3:]:
+        node = nodeInfos[0].split(",")[0]
+
+        desc, user, sys, idle, intr, ctxt = nodeInfos[0].split()
+
+        warn, crit = params["levels"]
+        
+        perfdata.append( ( ( "user_n%s" % ( node ) ), user ) )
+        perfdata.append( ( ( "sys_n%s" % ( node ) ), sys ) )
+        perfdata.append( ( ( "idle_n%s" % ( node ) ), idle, warn, crit, 0, 100 ) )
+        perfdata.append( ( ( "intr_n%s" % ( node ) ), intr ) )
+        perfdata.append( ( ( "ctxt_n%s" % ( node ) ), ctxt ) )
+
+        idle_total += int(idle)
+
+    utilized = 100 - ( idle_total * 0.5 )
+
+    if utilized >= crit:
+        state = max( state, 2 )
+    elif utilized >= warn:
+        state = max( state, 1 )
+    else:
+        state = 0
+
+    infotext = "%s%% utilized (%s%% idle)" % ( utilized, ( idle_total * 0.5 ) )
+    state = 0
+
+    if infotext == "":
+        infotext = "No item implemented"
+
+    return ( state, infotext, perfdata )
+
+check_info["3parssh"] = {
+    'default_levels_variable':  "threepar_node_cpu_default_levels",
+    'check_function':           check_3parstatcpu,
+    'inventory_function':       inventory_3parstatcpu,
+    'parse_function':           parse_3parssh,
+    'service_description':      'Status %s',
+    "has_perfdata"        :     True,
+    'group':                    '3par_nodecpu',
+}
+
+
+################################################################################
+#    _____           _                 
+#  / ____|         | |                
+# | (___  _   _ ___| |_ ___ _ __ ___  
+#  \___ \| | | / __| __/ _ \ '_ ` _ \ 
+#  ____) | |_| \__ \ ||  __/ | | | | |
+# |_____/ \__, |___/\__\___|_| |_| |_|
+#          __/ |                      
+#         |___/
+#         
+################################################################################
+
+def inventory_3par_cages(parsed):
+    inventory = []
+
+    data = parsed["showcage"]
+
+    for cageNum in data:
+        cageId = "Cage %s" % ( cageNum )
+        inventory += [ ( cageId, {} ) ]
+
+    return inventory
+
+def check_3par_cages(item, params, parsed):
+    state       = -1
+    infotext    = ""
+    perfdata    = []
+
+    data = parsed["showcage"]
+
+    for cageNum in data:
+        cageId = "Cage %s" % ( cageNum )
+        if item != cageId:
+            continue
+
+        firmware_card0 = data[cageNum][3][0].split()[1]
+        firmware_card1 = data[cageNum][3][0].split()[2]
+
+        state_card0 = data[cageNum][5][0].split()[1].split(",")[0]
+        state_card1 = data[cageNum][5][0].split()[1].split(",")[1]
+
+        ps0_desc, ps0_state, ps0_ac, ps0_dc, ps0_fanstate, ps0_f0speed, ps0_f1speed = data[cageNum][11][0].split()
+        ps1_desc, ps1_state, ps1_ac, ps1_dc, ps1_fanstate, ps1_f0speed, ps1_f1speed = data[cageNum][12][0].split()
+
+        if state_card0 != "OK":
+            infotext += "State Card 0 is %s" % ( state_card0 )
+            state = max( state, 1 )
+        if state_card1 != "OK":
+            infotext += "State Card 1 is %s" % ( state_card1 )
+            state = max( state, 1 )
+
+        if firmware_card0 != "Current":
+            infotext += "Firmware Card 0 is %s" % ( firmware_card0 )
+            state = max( state, 1 )
+        if firmware_card1 != "Current":
+            infotext += "Firmware Card 1 is %s" % ( firmware_card1 )
+            state = max( state, 1 )
+
+        if ps0_state != "OK":
+            infotext += "PS 0 State is %s" % ( ps0_state )
+            state = max( state, 1 )
+        if ps1_state != "OK":
+            infotext += "PS 1 State is %s" % ( ps1_state )
+            state = max( state, 1 )
+
+        state = max( state, 0 )
+
+    if infotext == "":
+        infotext = "All OK"
+
+    if state == -1:
+        state = 3
+
+    return ( state, infotext, perfdata )
+
+check_info["3parssh.cages"] = {
+    'default_levels_variable':  "threepar_default_levels",
+    'parse_function':           parse_3parssh,
+    'check_function':           check_3par_cages,
+    'inventory_function':       inventory_3par_cages,
+    'service_description':      'Status %s',
+    "has_perfdata"        :     True,
+    'group':                    'Storage',
+}

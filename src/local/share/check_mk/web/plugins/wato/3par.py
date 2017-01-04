@@ -1,6 +1,27 @@
 #!/usr/bin/python
 # -*- encoding: utf-8; py-indent-offset: 4 -*-
 
+register_check_parameters(
+    subgroup_storage,
+    "3par_nodecpu",
+    _("3Par - CPU"),
+    Dictionary(
+        elements = [
+            ("levels", Tuple(
+                title = _("Alert on too low CPU idle"),
+                elements = [
+                    Percentage(title = _("Warning at a value of"), default_value=20.0),
+                    Percentage(title = _("Critical at a value of"), default_value=10.0)
+                  ],
+                ),
+            ),
+        ]
+    ),
+    TextAscii(
+        title = _("ID of the node"),
+    ),
+    "dict"
+)
 
 ##############################################
 #  __      __   _                           

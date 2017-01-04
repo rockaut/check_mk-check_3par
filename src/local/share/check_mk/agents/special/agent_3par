@@ -3,6 +3,7 @@
 
 import httplib, urllib2, pprint, sys, os, getopt, socket
 import simplejson as json
+import subprocess
 
 # build_apiHeaders function
 def build_apiHeaders( sessionKey = "" ):
@@ -97,14 +98,6 @@ def get_system( sessionKey, sessionHost, sessionPort = 8080 ):
 
     parsed_response = json.loads( responseData )
 
-    #print "<<<3parwsapi.system>>>"
-    #print "******"
-    #print "%s: %s" % ( "Status", responseStatus )
-    #print "%s: %s" % ( "Reason", responseReason )
-    #print "-----"
-    #print json.dumps(parsed_response, sort_keys=True, indent=4, separators=(',', ': '))
-    #print "******"
-
     return parsed_response
 
 def get_volumes( sessionKey, sessionHost, sessionPort = 8080 ):
@@ -120,14 +113,6 @@ def get_volumes( sessionKey, sessionHost, sessionPort = 8080 ):
     conn.close()
 
     parsed_response = json.loads( responseData )
-
-    #print "<<<3parwsapi.volumes>>>"
-    #print "******"
-    #print "%s: %s" % ( "Status", responseStatus )
-    #print "%s: %s" % ( "Reason", responseReason )
-    #print "-----"
-    #print json.dumps(parsed_response, sort_keys=True, indent=4, separators=(',', ': '))
-    #print "******"
 
     return parsed_response
 
@@ -195,9 +180,136 @@ def get_flashcache( sessionKey, sessionHost, sessionPort = 8080 ):
 
     return parsed_response
 
+def get_remotecopygroups( sessionKey, sessionHost, sessionPort = 8080 ):
+    qUrl = '/api/v1/remotecopygroups'
+    apiHeaders = build_apiHeaders( sessionKey )
 
+    conn = httplib.HTTPSConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", qUrl, "", apiHeaders)
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+
+def get_sysrep_cachememorystatistics( sessionKey, sessionHost, sessionPort = 8080 ):
+    qUrl = '/api/v1/systemreporter/attime/cachememorystatistics/hires'
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPSConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", qUrl, "", apiHeaders)
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+
+def get_sysrep_cpgstatistics( sessionKey, sessionHost, sessionPort = 8080 ):
+    qUrl = '/api/v1/systemreporter/attime/cpgstatistics/hires'
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPSConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", qUrl, "", apiHeaders)
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+
+def get_sysrep_physicaldiskcapacity( sessionKey, sessionHost, sessionPort = 8080 ):
+    qUrl = '/api/v1/systemreporter/attime/physicaldiskcapacity/hires'
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPSConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", qUrl, "", apiHeaders)
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+
+def get_sysrep_physicaldiskspacedata( sessionKey, sessionHost, sessionPort = 8080 ):
+    qUrl = '/api/v1/systemreporter/attime/physicaldiskspacedata/hires'
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPSConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", qUrl, "", apiHeaders)
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+    
+def get_sysrep_physicaldiskstatistics( sessionKey, sessionHost, sessionPort = 8080 ):
+    qUrl = '/api/v1/systemreporter/attime/physicaldiskstatistics/hires'
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPSConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", qUrl, "", apiHeaders)
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+        
+def get_sysrep_vlunstatistics( sessionKey, sessionHost, sessionPort = 8080 ):
+    qUrl = '/api/v1/systemreporter/attime/vlunstatistics/hires'
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPSConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", qUrl, "", apiHeaders)
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+
+def get_sysrep_portstatistics( sessionKey, sessionHost, sessionPort = 8080 ):
+    qUrl = '/api/v1/systemreporter/attime/portstatistics/hires'
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPSConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", qUrl, "", apiHeaders)
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response    
+    
 def print_usage():
-    print 'usage: agent_3parwsapi -H <Host> -U <User> -P <Password> -v <Value,Value>'
+    print 'usage: agent_3parwsapi -H <Host> -U <User> -P <Password> -v <Value,Value> --sshuser <User>'
 
 #   .--Main----------------------------------------------------------------.
 #   |                        __  __       _                                |
@@ -208,7 +320,7 @@ def print_usage():
 #   |                                                                      |
 #   +----------------------------------------------------------------------+
 
-_defaultValues = [ "system", "cpgs", "volumes", "flashcache" ]
+_defaultValues = [ "system", "cpgs", "volumes", "flashcache", "ssh" ]
 
 def main( argv ):
     fetchValues = _defaultValues
@@ -217,16 +329,16 @@ def main( argv ):
     sessionUser = ''
     sessionPassword = ''
     sessionKey = ''
+    sshUser = ''
 
     try:
-        opts, args = getopt.getopt( argv, "hH:hU:hP:hv:", ["Host=", "User=", "Password=", "Values="])
+        opts, args = getopt.getopt( argv, "hH:hU:hP:hv:hs:", ["Host=", "User=", "Password=", "Values=", "sshuser="])
         if not opts:
             print_usage()
             sys.exit(2)
     except getopt.GetoptError:
         print_usage()
         sys.exit(2)
-
 
     for opt, arg in opts:
         if opt == '-h':
@@ -240,8 +352,10 @@ def main( argv ):
             sessionUser = arg
         elif opt in ("-P", "--Post"):
             sessionPassword = arg
+        elif opt in ("-s", "--sshuser"):
+            sshUser = arg
 
-    if sessionHost == "" or sessionUser == "" or sessionPassword == "":
+    if sessionHost == "" or sessionUser == "" or sessionPassword == "" or sshUser == "":
         print_usage()
         sys.exit(2)
 
@@ -278,8 +392,56 @@ def main( argv ):
         flashcache = get_flashcache( sessionKey, sessionHost )
         result["flashcache"] = flashcache
 
-        print json.dumps(result, sort_keys=True, indent=4, separators=(',', ': '))
+        remotecopygroups = get_remotecopygroups( sessionKey, sessionHost )
+        result["remotecopygroups"] = remotecopygroups
 
+        sysrep_cpgstatistics = get_sysrep_cpgstatistics( sessionKey, sessionHost )
+        if "code" in sysrep_cpgstatistics and sysrep_cpgstatistics["code"] == 9:
+            pass
+        else:
+            result["sysrep_cpgstatistics"] = sysrep_cpgstatistics
+        
+        sysrep_physicaldiskcapacity = get_sysrep_physicaldiskcapacity( sessionKey, sessionHost )
+        if "code" in sysrep_physicaldiskcapacity and sysrep_physicaldiskcapacity["code"] == 9:
+            pass
+        else:
+            result["sysrep_physicaldiskcapacity"] = sysrep_physicaldiskcapacity
+
+        sysrep_physicaldiskspacedata = get_sysrep_physicaldiskspacedata( sessionKey, sessionHost )
+        if "code" in sysrep_physicaldiskspacedata and sysrep_physicaldiskspacedata["code"] == 9:
+            pass
+        else:
+            result["sysrep_physicaldiskspacedata"] = sysrep_physicaldiskspacedata
+
+        sysrep_physicaldiskstatistics = get_sysrep_physicaldiskstatistics( sessionKey, sessionHost )
+        if "code" in sysrep_physicaldiskstatistics and sysrep_physicaldiskstatistics["code"] == 9:
+            pass
+        else:
+            result["sysrep_physicaldiskstatistics"] = sysrep_physicaldiskstatistics
+        
+        sysrep_cachememorystatistics = get_sysrep_cachememorystatistics( sessionKey, sessionHost )
+        if "code" in sysrep_cachememorystatistics and sysrep_cachememorystatistics["code"] == 9:
+            pass
+        else:
+            result["sysrep_cachememorystatistics"] = sysrep_cachememorystatistics
+        
+        sysrep_portstatistics = get_sysrep_portstatistics( sessionKey, sessionHost )
+        if "code" in sysrep_portstatistics and sysrep_portstatistics["code"] == 9:
+            pass
+        else:
+            result["sysrep_portstatistics"] = sysrep_portstatistics
+        
+        sysrep_vlunstatistics = get_sysrep_vlunstatistics( sessionKey, sessionHost )
+        if "code" in sysrep_vlunstatistics and sysrep_vlunstatistics["code"] == 9:
+            pass
+        else:
+            result["sysrep_vlunstatistics"] = sysrep_vlunstatistics
+
+        print json.dumps(result, sort_keys=True, indent=4, separators=(',', ': '))
+        
+        cmdSsh = "%s/agent_3parssh %s %s" % ( os.path.dirname(__file__), sessionHost, sshUser )
+        print subprocess.check_output( cmdSsh, shell=True, executable='/bin/bash' )
+        
     except:
         print("Unexpected error:", sys.exc_info()[0])
         if sessionKey != "":

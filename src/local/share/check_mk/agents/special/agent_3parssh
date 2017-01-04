@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if [ "$1" == "" ]
+then
+	echo Invalid usage : agent_3parssh InServ
+	exit 3
+fi
+
+echo "<<<3parssh:sep(0)>>>"
+echo "---statcpu---"
+ssh $2@$1 statcpu -d 1 -iter 1 -t
+echo "---statcpu---"
+
+echo "---showcage---"
+ssh $2@$1 showcage -d
+echo "---showcage---"

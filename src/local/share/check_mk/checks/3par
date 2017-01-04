@@ -82,6 +82,25 @@ def parse_3par(info):
     parsed = json.loads(b)
     return parsed
 
+def get_vlunstats_data_host( parsed, host ):
+
+    if "sysrep_vlunstatistics" not in parsed:
+        return {}
+
+    if "members" not in parsed["sysrep_vlunstatistics"]:
+        return {}
+
+    data = []
+
+    for entry in parsed["sysrep_vlunstatistics"]["members"]:
+        if "hostname" not in entry:
+            continue
+
+        if entry["hostname"] == host:
+            data.append( entry )
+
+    return data
+
 ################################################################################
 #    _____           _                 
 #  / ____|         | |                
@@ -108,6 +127,7 @@ def check_3par(item, params, parsed):
 
     infotext = "%s Node %s (SN: %s / V: %s)" % ( systemInfos["totalNodes"], systemInfos["model"], systemInfos["serialNumber"], systemInfos["systemVersion"] )
 
+    # TODO: what if node removed?
     if len(systemInfos["onlineNodes"]) < systemInfos["totalNodes"]:
         state = 2
         infotext = "Only %s of %s nodes online!" % ( systemInfos["onlineNodes"], systemInfos["totalNodes"] )
@@ -143,20 +163,47 @@ def check_3par_systemtotalcap(item, params, parsed):
 
     systemInfos = parsed["system"]
 
-    allocGB = systemInfos["allocatedCapacityMiB"] / 1024.0
-    totalGB = systemInfos["totalCapacityMiB"] / 1024.0
-    perc = allocGB / totalGB * 100.0
+    used_mb = systemInfos["allocatedCapacityMiB"] * 1.048576
+    size_mb = systemInfos["totalCapacityMiB"] * 1.048576
+    used_perc = 100.0 * (float(used_mb) / size_mb)
+    size_gb   = size_mb / 1024.0
+    used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
+    size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
 
-    if perc >= params["levels"][1]:
-        state = 2
-    elif perc >= params["levels"][0]:
-        state = 1
-    elif perc < params["levels"][0]:
-        state = 0
+    # If both numbers end with both MB or GB or TB, then drop the first one
+    if used_hr[-2:] == size_hr[-2:]:
+        used_hr = used_hr[:-3]
+
+    levels = get_filesystem_levels("bla", "volume", size_gb, params)
+    warn_mb, crit_mb       = levels["levels_mb"]
+
+    if warn_mb <= -1:
+        #Negativ levels, so calculate mb left
+        rest_mb = size_mb - used_mb
+        crit_mb = crit_mb * -1
+        warn_mb = warn_mb * -1
+        if rest_mb <= crit_mb:
+            state = 2
+        elif rest_mb <= warn_mb:
+            state = max(1, state)
+        else:
+            state = 0
     else:
-        state = 3
+        if used_mb >= crit_mb:
+            state = 2
+        elif used_mb >= warn_mb:
+            state = max(1, state)
+        else:
+            state = 0
 
-    infotext = "{:.0f}% used ({:.0f} of {:.0f} GB),(levels at {:.2f}/{:.2f}%)".format( perc, allocGB, totalGB, params["levels"][0], params["levels"][1] )
+    #infotext = "{:.0f}% used ({:.1f} of {:.1f} GB),(levels at {:.2f}/{:.2f}%)".format( used_perc, used_hr, size_hr, params["levels"][0], params["levels"][1] )
+    if used_perc > 0:
+        perc_precision = max(1, 2 - int(round(math.log(used_perc, 10))))
+    else:
+        perc_precision = 1
+    
+    infotext += "%%.%df%%%% used (%%s of %%s), %%s" % perc_precision % (used_perc, used_hr, size_hr, levels["levels_text"])
+
     perfdata.append( ( "allocatedCapacityMiB", systemInfos["allocatedCapacityMiB"], params["levels"][0], params["levels"][1], 0, systemInfos["totalCapacityMiB"] ) )
 
     return ( state, infotext, perfdata )
@@ -188,20 +235,56 @@ def check_3par_systemfailedcap(item, params, parsed):
 
     systemInfos = parsed["system"]
 
-    failedGB = systemInfos["failedCapacityMiB"] / 1024.0
-    totalGB = systemInfos["totalCapacityMiB"] / 1024.0
-    perc = failedGB / totalGB * 100.0
+    used_mb = systemInfos["failedCapacityMiB"] * 1.048576
+    size_mb = systemInfos["totalCapacityMiB"] * 1.048576
+    used_perc = 100.0 * (float(used_mb) / size_mb)
+    size_gb   = size_mb / 1024.0
+    used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
+    size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
 
-    if perc >= params["levels"][1]:
-        state = 2
-    elif perc >= params["levels"][0]:
-        state = 1
-    elif perc < params["levels"][0]:
-        state = 0
+    # If both numbers end with both MB or GB or TB, then drop the first one
+    if used_hr[-2:] == size_hr[-2:]:
+        used_hr = used_hr[:-3]
+
+    levels = get_filesystem_levels("bla", "volume", size_gb, params)
+    warn_mb, crit_mb       = levels["levels_mb"]
+
+    #print used_hr
+    #print used_mb
+    #print warn_mb
+    #print crit_mb
+
+    #3.66
+    #3838627.0208
+    #3660.0
+    #4000.0
+
+    if warn_mb <= -1:
+        #Negativ levels, so calculate mb left
+        rest_mb = size_mb - used_mb
+        crit_mb = crit_mb * -1
+        warn_mb = warn_mb * -1
+        if rest_mb <= crit_mb:
+            state = 2
+        elif rest_mb <= warn_mb:
+            state = max(1, state)
+        else:
+            state = 0
     else:
-        state = 3
+        if used_mb >= crit_mb:
+            state = 2
+        elif used_mb >= warn_mb:
+            state = max(1, state)
+        else:
+            state = 0
 
-    infotext = "{:.0f}% used ({:.1f} of {:.1f} GB),(levels at {:.2f}/{:.2f}%)".format( perc, failedGB, totalGB, params["levels"][0], params["levels"][1] )
+    if used_perc > 0:
+        perc_precision = max(1, 2 - int(round(math.log(used_perc, 10))))
+    else:
+        perc_precision = 1
+    
+    infotext += "%%.%df%%%% used (%%s of %%s), %%s" % perc_precision % (used_perc, used_hr, size_hr, levels["levels_text"])
+    
     perfdata.append( ( "failedCapacityMiB", systemInfos["failedCapacityMiB"], params["levels"][0], params["levels"][1], 0, systemInfos["totalCapacityMiB"] ) )
 
     return ( state, infotext, perfdata )
@@ -226,6 +309,14 @@ check_info["3par.SystemFailedCapacity"] = {
 #                           
 ##############################################
 
+
+hp3par_hosts_default_levels = {}
+factory_settings["hp3par_hosts_default_levels"] = {
+    "hostPortLevels": ( 3, 2 ),
+    "serviceTimeMSLevels": ( 30, 50 ),
+}
+
+
 def inventory_3par_hosts(parsed):
     inventory = []
 
@@ -245,14 +336,50 @@ def check_3par_hosts(item, params, parsed):
     if "hosts" not in parsed:
         return ( state, infotext, perfdata )
 
+    statsdata = get_vlunstats_data_host( parsed, item )
+    
     for host in parsed["hosts"]["members"]:
         if item == host["name"]:
-            infotext = "Host: %s" % ( host["name"] )
             state = 0
 
             portCount = get_hostports_state( item, params, parsed )
+            if portCount <= params["hostPortLevels"][1]:
+                state = max( state, 2 )
+                infotext = "Only %s Ports (!!)" % ( portCount )
+            elif portCount <= params["hostPortLevels"][0]:
+                state = max( state, 1 )
+                infotext = "Only %s Ports (!)" % ( portCount )
+            else:
+                infotext = "%s Ports" % ( portCount )
 
-            infotext += " on %s Ports" % ( portCount )
+            # TODO: levels
+            # TODO: _min, _avg, IOSizeKB
+
+            serviceTimeMS_total_max = 0
+            IO_total_sum            = 0
+            KBytes_total_sum        = 0
+            queueLength_sum         = 0
+
+            if len(statsdata) > 0:
+                for entry in statsdata: 
+                    serviceTimeMS_total_max = max( entry["serviceTimeMS"]["total"], serviceTimeMS_total_max )
+                    IO_total_sum += entry["IO"]["total"]
+                    KBytes_total_sum += entry["KBytes"]["total"]
+                    queueLength_sum += entry["queueLength"]
+
+                if serviceTimeMS_total_max >= params["serviceTimeMSLevels"][1]:
+                    state = max( state, 2 )
+                    infotext += " - max %s ms (!!)" % ( serviceTimeMS_total_max )
+                elif serviceTimeMS_total_max >= params["serviceTimeMSLevels"][0]:
+                    state = max( state, 1 )
+                    infotext += " - max %s ms (!)" % ( serviceTimeMS_total_max )
+                else:
+                    state = max( state, 0 )
+
+                perfdata.append( ( "serviceTimeMS_total_max", serviceTimeMS_total_max, params["serviceTimeMSLevels"][0], params["serviceTimeMSLevels"][1] ) )
+                perfdata.append( ( "IO_total_sum", IO_total_sum ) )
+                perfdata.append( ( "KBytes_total_sum", KBytes_total_sum ) )
+                perfdata.append( ( "queueLength_sum", queueLength_sum ) )
 
             return ( state, infotext, perfdata )
 
@@ -273,13 +400,13 @@ def get_hostports_state(host, params, parsed):
     return portCount
 
 check_info["3par.hosts"] = {
-    'default_levels_variable':  "threepar_default_levels",
+    'default_levels_variable':  "hp3par_hosts_default_levels",
     'check_function':           check_3par_hosts,
     'inventory_function':       inventory_3par_hosts,
     'parse_function':           parse_3par,
     'service_description':      'Host Status - %s',
     "has_perfdata"        :     True,
-    'group':                    'Storage',
+    'group':                    '3par_hosts',
 }
 
 ##############################################
@@ -318,8 +445,8 @@ def check_3par_cpgs(item, params, parsed):
         if item == cpg["name"]:
             totalVVs = ( cpg["numFPVVs"] + cpg["numTDVVs"] + cpg["numTPVVs"] )
 
-            used_mb = cpg["UsrUsage"]["usedMiB"]
-            size_mb = cpg["UsrUsage"]["totalMiB"]
+            used_mb = cpg["UsrUsage"]["usedMiB"] * 1.048576
+            size_mb = cpg["UsrUsage"]["totalMiB"] * 1.048576
             used_perc = 100.0 * (float(used_mb) / size_mb)
             size_gb   = size_mb / 1024.0
             used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
@@ -408,6 +535,9 @@ def inventory_3par_flashcache(parsed):
     if "flashcache" not in parsed:
         return inventory
 
+    if "code" in parsed["flashcache"] and parsed["flashcache"]["code"] == 285:
+        return inventory
+
     return [ ( "FlashCache", {} ) ]
 
 def check_3par_flashcache(item, params, parsed):
@@ -478,9 +608,41 @@ def inventory_3par_vols(parsed):
 
     return inventory
 
+def get_sysrep_vlunstatistics(vlun, parsed):
+    stats = {}
+    for member in parsed["sysrep_vlunstatistics"]["members"]:
+        if member["volumeName"] != vlun:
+            continue
+
+        memberid = "%s:%s:%s:%s" % ( member["node"], member["slot"], member["cardPort"], member["hostname"] )
+        stats[memberid] = member
+
+    values   = {}
+    IO_read  = 0
+    IO_write = 0
+    IO_total = 0
+    serviceTimeMS_read_max = 0
+    serviceTimeMS_write_max = 0
+    serviceTimeMS_total_max = 0
+
+    for member in stats:
+        IO_read  += stats[member]["IO"]["read"]
+        IO_write += stats[member]["IO"]["write"]
+        IO_total += stats[member]["IO"]["total"]
+        serviceTimeMS_read_max  = max( serviceTimeMS_read_max, stats[member]["serviceTimeMS"]["read"] )
+        serviceTimeMS_write_max = max( serviceTimeMS_write_max, stats[member]["serviceTimeMS"]["write"] )
+        serviceTimeMS_total_max = max( serviceTimeMS_total_max, stats[member]["serviceTimeMS"]["total"] )
+
+    values = {
+        'IO':   { 'read': IO_read, 'write': IO_write, 'total': IO_total },
+        'serviceTimeMS' : { 'read_max': serviceTimeMS_read_max, 'write_max': serviceTimeMS_write_max, 'total_max': serviceTimeMS_total_max }
+    }
+
+    return values
+
 def check_3par_vols(item, params, parsed):
-    state       = 3
-    infotext    = "No item implemented"
+    state       = -1
+    infotext    = ""
     perfdata    = []
 
     if "volumes" in parsed:
@@ -490,8 +652,8 @@ def check_3par_vols(item, params, parsed):
 
             vstate = vol["state"] - 1
 
-            used_mb = vol["userSpace"]["usedMiB"]
-            size_mb = vol["sizeMiB"]
+            used_mb = vol["userSpace"]["usedMiB"] * 1.048576
+            size_mb = vol["sizeMiB"] * 1.048576
             used_perc = 100.0 * (float(used_mb) / size_mb)
             size_gb   = size_mb / 1024.0
             used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
@@ -512,18 +674,18 @@ def check_3par_vols(item, params, parsed):
                 crit_mb = crit_mb * -1
                 warn_mb = warn_mb * -1
                 if rest_mb <= crit_mb:
-                    state = 2
+                    state = max(2, state)
                 elif rest_mb <= warn_mb:
                     state = max(1, state)
                 else:
-                    state = 0
+                    state = max(0, state)
             else:
                 if used_mb >= crit_mb:
-                    state = 2
+                    state = max(2, state)
                 elif used_mb >= warn_mb:
                     state = max(1, state)
                 else:
-                    state = 0
+                    state = max(0, state)
             if vstate >= levels["volstatus_critical"]:
                 state = max(2, state)
             elif vstate >= levels["volstatus_warning"]:
@@ -551,7 +713,25 @@ def check_3par_vols(item, params, parsed):
             perfdata.append( ( "UsrUsedMiB", vol["userSpace"]["usedMiB"], warn_mb, crit_mb, vol["sizeMiB"] ) )
             perfdata.append( ( "Compaction", vol["capacityEfficiency"]["compaction"], warn_grade, crit_grade ) )
 
+            if "sysrep_vlunstatistics" in parsed:
+                stats = get_sysrep_vlunstatistics( item, parsed )
+
+                infotext += " - max. %s ms" % ( stats['serviceTimeMS']['read_max'] )
+
+                perfdata.append( ( "IO_read", stats['IO']['read'] ) )
+                perfdata.append( ( "IO_write", stats['IO']['write'] ) )
+                perfdata.append( ( "IO_total", stats['IO']['total'] ) )
+                perfdata.append( ( "serviceTimeMS_read_max", stats['serviceTimeMS']['read_max'] ) )
+                perfdata.append( ( "serviceTimeMS_write_max", stats['serviceTimeMS']['write_max'] ) )
+                perfdata.append( ( "serviceTimeMS_total_max", stats['serviceTimeMS']['total_max'] ) )
+
             return ( state, infotext, perfdata )
+
+    if infotext == "" or state < 0:
+        state = 3
+        infotext = "Not implemented"
+
+    return ( state, infotext, perfdata )
 
 check_info["3par.vols"] = {
     'default_levels_variable':  "threepar_volumes_default_levels",
@@ -594,7 +774,8 @@ def check_3par_ports(item, params, parsed):
             state       = -1
             infotext    = "No item implemented"
             perfdata    = []
-            portName = ""
+            portName    = ""
+            portPos     = ""
 
             if "label" in port:
                 if "portWWN" in port:
@@ -651,6 +832,37 @@ def check_3par_ports(item, params, parsed):
                 elif port["failoverState"] == 6:    infotext += " - Failover ACTIVE_FAILED"
                 elif port["failoverState"] == 7:    infotext += " - FAILBACK_PENDING"
 
+            if "portPos" in port:
+                portPos = "%s:%s:%s" % ( port["portPos"]["node"], port["portPos"]["slot"], port["portPos"]["cardPort"] )
+                infotext += " - %s" % ( portPos )
+
+            if "partnerPos" in port:
+                infotext += " (%s:%s:%s)" % ( port["partnerPos"]["node"], port["partnerPos"]["slot"], port["partnerPos"]["cardPort"] )
+
+            if portPos != "" and "sysrep_portstatistics" in parsed:
+                stats = get_sysrepstats_port( portPos, parsed )
+                if 'serviceTimeMS' in stats:
+                    infotext += " - %s ms" % ( stats["serviceTimeMS"]["total"] )
+                    perfdata.append( ( "serviceTimeMS_read", stats["serviceTimeMS"]["read"] ) )
+                    perfdata.append( ( "serviceTimeMS_write", stats["serviceTimeMS"]["write"] ) )
+                    perfdata.append( ( "serviceTimeMS_total", stats["serviceTimeMS"]["total"] ) )
+                if 'IO' in stats:
+                    perfdata.append( ( "IO_read", stats["IO"]["read"] ) )
+                    perfdata.append( ( "IO_write", stats["IO"]["write"] ) )
+                    perfdata.append( ( "IO_total", stats["IO"]["total"] ) )
+                if 'IOSizeKB' in stats:
+                    perfdata.append( ( "IOSizeKB_read", stats["IOSizeKB"]["read"] ) )
+                    perfdata.append( ( "IOSizeKB_write", stats["IOSizeKB"]["write"] ) )
+                    perfdata.append( ( "IOSizeKB_total", stats["IOSizeKB"]["total"] ) )
+                if 'KBytes' in stats:
+                    perfdata.append( ( "KBytes_read", stats["KBytes"]["read"] ) )
+                    perfdata.append( ( "KBytes_write", stats["KBytes"]["write"] ) )
+                    perfdata.append( ( "KBytes_total", stats["KBytes"]["total"] ) )
+                if 'busyPct' in stats:
+                    perfdata.append( ( "busyPct", stats["busyPct"] ) )
+                if 'queueLength' in stats:
+                    perfdata.append( ( "queueLength", stats["queueLength"] ) )
+
             if state == -1:
                 state = 3
 
@@ -660,6 +872,16 @@ def check_3par_ports(item, params, parsed):
         state = 3
     return ( state, infotext, perfdata )
 
+def get_sysrepstats_port(portPos, parsed):
+    for member in parsed["sysrep_portstatistics"]["members"]:
+        memberPos = "%s:%s:%s" % ( member["node"], member["slot"], member["cardPort"] )
+        if memberPos != portPos:
+            continue
+
+        return member
+
+    return {}
+
 check_info["3par.ports"] = {
     'default_levels_variable':  "threepar_ports_default_levels",
     'check_function':           check_3par_ports,
@@ -668,4 +890,399 @@ check_info["3par.ports"] = {
     'service_description':      'Port Status - %s',
     "has_perfdata"        :     True,
     'group':                    '3par_ports',
+}
+
+
+
+
+##############################################
+#
+#   Remote Copy Groups
+# 
+##############################################
+
+hp3par_rcopyGroupStateEnum = {
+    1 : "new",
+    2 : "starting",
+    3 : "started",
+    4 : "restart",
+    5 : "stopped",
+    6 : "backup",
+    7 : "failsave",
+    8 : "unknown",
+    9 : "logging",
+}
+
+hp3par_rcopyGroupModeEnum = {
+    1 : "sync",
+    2 : "periodic",
+    3 : "periodic",
+    4 : "async",
+}
+
+hp3par_rcopyGroupVVStatusEnum =  {
+    1 : "new",
+    2 : "syncing",
+    3 : "synced",
+    4 : "unsync",
+    5 : "stale",
+    6 : "newpresynced",
+    7 : "newsyncedfromsnap",
+    8 : "stopped",
+    9 : "failsave",
+    10 : "unknown",
+    11 : "logging",
+}
+
+hp3par_rcopyGroupState_default_levels = {}
+factory_settings["hp3par_rcopyGroupState_default_levels"] = {
+    "groupState" : {
+        1 : 0,
+        2 : 0,
+        3 : 0,
+        4 : 1,
+        5 : 1,
+        6 : 0,
+        7 : 2,
+        8 : 2,
+        9 : 1,
+    },
+    "groupMode" : {
+        1  : 0,
+        2  : 1,
+        3  : 0,
+        4  : 0
+    },
+    "remoteVolumesSyncStatus" : {
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 1,
+        5: 1,
+        6: 0,
+        7: 0,
+        8: 1,
+        9: 2,
+        10: 2,
+        11: 1,
+    },
+    "roleReversed": False,
+}
+
+
+def get_hp3par_rcopyGroupStateEnum_desc( id ):
+    result = 8
+
+    if id in hp3par_rcopyGroupStateEnum:
+        return hp3par_rcopyGroupStateEnum[id]
+
+    return result
+
+def get_hp3par_rcopyGroupModeEnum_desc( id ):
+    result = 8
+
+    if id in hp3par_rcopyGroupModeEnum:
+        return hp3par_rcopyGroupModeEnum[id]
+
+    return result
+
+def get_hp3par_rcopyGroupVVStatusEnum_desc( id ):
+    result = 8
+
+    if id in hp3par_rcopyGroupVVStatusEnum:
+        return hp3par_rcopyGroupVVStatusEnum[id]
+
+    return result
+
+def inventory_3par_remotecopygroups(parsed):
+    inventory = []
+
+    if "remotecopygroups" in parsed:
+        for rcgroup in parsed["remotecopygroups"]["members"]:
+            if "name" in rcgroup:
+                inventory.append( ( rcgroup["name"], None ) )
+
+    return inventory
+
+def check_3par_remotecopygroups(item, params, parsed):
+    state    = -1
+    infotext = "not implemented - "
+    perfdata = []
+
+    if "remotecopygroups" in parsed:
+        for rcgroup in parsed["remotecopygroups"]["members"]:
+            if "name" in rcgroup and rcgroup["name"] == item:
+                if rcgroup["role"] == 1:
+                    infotext += "Primary"
+                else:
+                    infotext += "Secondary"
+
+                if "targets" in rcgroup:
+                    #Todo: handle multiple targets
+                    #Todo: handle Policies
+                    for rctarget in rcgroup["targets"]:
+                        if "state" in rctarget:
+                            infotext += " - %s" % ( get_hp3par_rcopyGroupStateEnum_desc( rctarget["state"] ) )
+                            state = max( state, params["groupState"][rctarget["state"]] )
+                        if "mode" in rctarget:
+                            infotext += " - %s" % ( get_hp3par_rcopyGroupModeEnum_desc( rctarget["mode"] ) )
+                            state = max( state, params["groupMode"][rctarget["mode"]] )
+                        if rctarget["roleReversed"] is not params["roleReversed"]:
+                            infotext += " - roleReversed is %s (!!)" % ( rctarget["roleReversed"] )
+                            state = max( state, 2 )
+
+                if "volumes" in rcgroup:
+                    #Todo: handle multiple volumes
+                    #Todo: handle last volumes
+                    for rcgroupVolume in rcgroup["volumes"]:
+                        if "remoteVolumes" in rcgroupVolume:
+                            for remoteVolume in rcgroupVolume["remoteVolumes"]:
+                                if "syncStatus" in remoteVolume:
+                                    state = max( state, params["remoteVolumesSyncStatus"][remoteVolume["syncStatus"]])
+                                    if params["remoteVolumesSyncStatus"][remoteVolume["syncStatus"]] != 0:
+                                        infotext += " - Volumes are %s" % ( get_hp3par_rcopyGroupVVStatusEnum_desc( remoteVolume["syncStatus"] ) )
+            # end name == item
+
+    if state == -1:
+        state = 3
+    return ( state, infotext, perfdata )
+
+check_info["3par.remotecopygroups"] = {
+    'default_levels_variable':  "hp3par_rcopyGroupState_default_levels",
+    'check_function':           check_3par_remotecopygroups,
+    'inventory_function':       inventory_3par_remotecopygroups,
+    'parse_function':           parse_3par,
+    'service_description':      'RCG - %s',
+    "has_perfdata"        :     True,
+    'group':                    '3par_remotecopygroups',
+}
+
+##############################################
+#
+#   Physical Disks
+# 
+##############################################
+
+hp3par_physicaldisks_default_levels = {}
+factory_settings["hp3par_physicaldisks_default_levels"] = {
+    "pdCountLevels":     ( 2, 1 ),
+    "lifeLeftPctLevels": ( 50, 30 ),
+    "tempLevels":        ( 35, 40 ),
+    "busyPctLevels":     ( 80, 90 ),
+    "queueLengthLevels": ( 200, 350 ),
+    "serviceTimeMSLevels": ( 10, 15 ),
+}
+
+hp3par_pdType = {
+    1: "FC",
+    2: "NL",
+    3: "SSD",
+}
+
+def get_hp3par_pdType_desc( id ):
+    result = "Unknown"
+
+    if id in hp3par_pdType:
+        return hp3par_pdType[id]
+
+    return result
+
+def inventory_3par_physicaldisks(parsed):
+    inventory = []
+
+    typeCount = {
+        1: 0,
+        2: 0,
+        3: 0,
+    }
+
+    if "sysrep_physicaldiskcapacity" in parsed:
+        for pd in parsed["sysrep_physicaldiskcapacity"]["members"]:
+            typeCount[pd["type"]] += 1            
+
+    if typeCount[1] > 0:
+        inventory.append( ( "PD Summary - FC", None ) )
+
+    if typeCount[2] > 0:
+        inventory.append( ( "PD Summary - NL", None ) )
+
+    if typeCount[3] > 0:
+        inventory.append( ( "PD Summary - SSD", None ) )
+
+    return inventory
+
+def check_3par_physicaldisks(item, params, parsed):
+    state    = -1
+    infotext = "not implemented"
+    perfdata = []
+
+    pd_count = 0
+
+    lifeLeftPct_min = 100
+    lifeLeftPct_max = 0
+    lifeLeftPct_sum = 0
+
+    temp_min = 999
+    temp_max = 0
+    temp_sum = 0
+
+    busyPct_min = 100
+    busyPct_max = 0
+    busyPct_sum = 0
+
+    queueLength_min = 9999
+    queueLength_max = 0
+    queueLength_sum = 0
+
+    serviceTimeMS_total_min = 9999
+    serviceTimeMS_total_max = 0
+    serviceTimeMS_total_sum = 0
+
+    if item == "PD Summary - FC":
+        pd_type = 1
+    if item == "PD Summary - NL":
+        pd_type = 2
+    if item == "PD Summary - SSD":
+        pd_type = 3
+
+    # Todo: failed capacity
+
+    if "sysrep_physicaldiskcapacity" in parsed:
+        for pd in parsed["sysrep_physicaldiskcapacity"]["members"]:
+            if pd["type"] != pd_type:
+                continue
+            pd_count += 1
+
+        if pd_count <= params["pdCountLevels"][1]:
+            state = max( state, 2 )
+        elif pd_count <= params["pdCountLevels"][0]:
+            state = max( state, 1 )
+        else:
+            state = max( state, 0 )
+
+        perfdata.append( ( "pd_count", pd_count ) )
+        infotext = "%s disks present" % ( pd_count )
+
+    if "sysrep_physicaldiskspacedata" in parsed:
+        for pd in parsed["sysrep_physicaldiskspacedata"]["members"]:
+            if pd["type"] != pd_type:
+                continue
+
+            temp_min = min( temp_min, pd["temperatureC"] )
+            temp_max = max( temp_max, pd["temperatureC"] )
+            temp_sum += pd["temperatureC"]
+
+            # only SSD shows wear gauge
+            if pd["type"] != 3:
+                continue
+
+            lifeLeftPct_min = min( lifeLeftPct_min, pd["lifeLeftPct"] )
+            lifeLeftPct_max = max( lifeLeftPct_max, pd["lifeLeftPct"] )
+            lifeLeftPct_sum += pd["lifeLeftPct"]
+
+        temp_avg = temp_sum / pd_count
+
+        if temp_max >= params["tempLevels"][1]:
+            state = max( state, 2 )
+            infotext += " - max. %s°C (!!)" % ( temp_max )
+        elif temp_max >= params["tempLevels"][0]:
+            state = max( state, 1 )
+            infotext += " - max. %s°C (!)" % ( temp_max )
+        else:
+            state = max( state, 0 )
+
+        perfdata.append( ( "temp_min", temp_min ) )
+        perfdata.append( ( "temp_max", temp_max, params["tempLevels"][0], params["tempLevels"][1] ) )
+        perfdata.append( ( "temp_avg", temp_avg ) )
+
+        # only SSD shows wear gauge
+        if pd_type == 3:
+            lifeLeftPct_avg = lifeLeftPct_sum / pd_count
+
+            if lifeLeftPct_min <= params["lifeLeftPctLevels"][1]:
+                state = max( state, 2 )
+                infotext += " - min. %s%% life left (!!)" % ( lifeLeftPct_min )
+            elif lifeLeftPct_min <= params["lifeLeftPctLevels"][0]:
+                state = max( state, 1 )
+                infotext += " - min. %s%% life left (!)" % ( lifeLeftPct_min )
+            else:
+                state = max( state, 0 )
+            
+            perfdata.append( ( "lifeLeftPct_min", lifeLeftPct_min, params["lifeLeftPctLevels"][0], params["lifeLeftPctLevels"][1], 0, 100 ) )
+            perfdata.append( ( "lifeLeftPct_max", lifeLeftPct_max, 0, 0, 0, 100 ) )
+            perfdata.append( ( "lifeLeftPct_avg", lifeLeftPct_avg, 0, 0, 0, 100 ) )
+
+    if "sysrep_physicaldiskstatistics" in parsed:
+        for pd in parsed["sysrep_physicaldiskstatistics"]["members"]:
+            if pd["type"] != pd_type:
+                continue
+
+            busyPct_min = min( busyPct_min, pd["busyPct"] )
+            busyPct_max = max( busyPct_max, pd["busyPct"] )
+            busyPct_sum += pd["busyPct"]
+
+            queueLength_min = min( queueLength_min, pd["queueLength"] )
+            queueLength_max = max( queueLength_max, pd["queueLength"] )
+            queueLength_sum += pd["queueLength"]
+
+            serviceTimeMS_total_min = min( serviceTimeMS_total_min, pd["serviceTimeMS"]["total"] )
+            serviceTimeMS_total_max = max( serviceTimeMS_total_max, pd["serviceTimeMS"]["total"] )
+            serviceTimeMS_total_sum = pd["serviceTimeMS"]["total"]
+
+        busyPct_avg     = busyPct_sum / pd_count
+        queueLength_avg = queueLength_sum / pd_count
+        serviceTimeMS_total_avg = serviceTimeMS_total_sum / pd_count
+
+        if busyPct_max >= params["busyPctLevels"][1]:
+            state = max( state, 2 )
+            infotext += " - max. %s%% busy (!!)" % ( busyPct_max )
+        elif busyPct_max >= params["busyPctLevels"][0]:
+            state = max( state, 1 )
+            infotext += " - max. %s%% busy (!)" % ( busyPct_max )
+        else:
+            state = max( state, 0 )
+
+        if queueLength_max >= params["queueLengthLevels"][1]:
+            state = max( state, 2 )
+            infotext += " - max. %s Queue (!!)" % ( queueLength_max )
+        elif queueLength_max >= params["queueLengthLevels"][0]:
+            state = max( state, 1 )
+            infotext += " - max. %s Queue (!)" % ( queueLength_max )
+        else:
+            state = max( state, 0 )
+
+        if serviceTimeMS_total_max >= params["serviceTimeMSLevels"][1]:
+            state = max( state, 2 )
+            infotext += " - max. %s ms (!!)" % ( serviceTimeMS_total_max )
+        elif serviceTimeMS_total_max >= params["serviceTimeMSLevels"][0]:
+            state = max( state, 1 )
+            infotext += " - max. %s ms (!)" % ( serviceTimeMS_total_max )
+        else:
+            state = max( state, 0 )
+            infotext += " - max. %s ms" % ( serviceTimeMS_total_max )
+
+        perfdata.append( ( "busyPct_min", busyPct_min, 0, 0, 0, 100 ) )
+        perfdata.append( ( "busyPct_max", busyPct_max, params["busyPctLevels"][0], params["busyPctLevels"][1], 0, 100 ) )
+        perfdata.append( ( "busyPct_avg", busyPct_avg, 0, 0, 0, 100 ) )
+
+        perfdata.append( ( "queueLength_min", queueLength_min, 0, 0, 0, 100 ) )
+        perfdata.append( ( "queueLength_max", queueLength_max, params["queueLengthLevels"][0], params["queueLengthLevels"][1], 0, 100 ) )
+        perfdata.append( ( "queueLength_avg", queueLength_avg, 0, 0, 0, 100 ) )
+
+        perfdata.append( ( "serviceTimeMS_total_min", serviceTimeMS_total_min, 0, 0, 0, 100 ) )
+        perfdata.append( ( "serviceTimeMS_total_max", serviceTimeMS_total_max, params["serviceTimeMSLevels"][0], params["serviceTimeMSLevels"][1], 0, 100 ) )
+        perfdata.append( ( "serviceTimeMS_total_avg", serviceTimeMS_total_avg, 0, 0, 0, 100 ) )
+
+    if state == -1:
+        state = 3
+    return ( state, infotext, perfdata )
+
+check_info["3par.physicaldisks"] = {
+    'default_levels_variable':  "hp3par_physicaldisks_default_levels",
+    'check_function':           check_3par_physicaldisks,
+    'inventory_function':       inventory_3par_physicaldisks,
+    'parse_function':           parse_3par,
+    'service_description':      '%s',
+    "has_perfdata"        :     True,
+    'group':                    '3par_physicaldisks',
 }
