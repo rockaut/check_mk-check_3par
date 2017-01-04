@@ -98,14 +98,6 @@ def get_system( sessionKey, sessionHost, sessionPort = 8080 ):
 
     parsed_response = json.loads( responseData )
 
-    #print "<<<3parwsapi.system>>>"
-    #print "******"
-    #print "%s: %s" % ( "Status", responseStatus )
-    #print "%s: %s" % ( "Reason", responseReason )
-    #print "-----"
-    #print json.dumps(parsed_response, sort_keys=True, indent=4, separators=(',', ': '))
-    #print "******"
-
     return parsed_response
 
 def get_volumes( sessionKey, sessionHost, sessionPort = 8080 ):
@@ -121,14 +113,6 @@ def get_volumes( sessionKey, sessionHost, sessionPort = 8080 ):
     conn.close()
 
     parsed_response = json.loads( responseData )
-
-    #print "<<<3parwsapi.volumes>>>"
-    #print "******"
-    #print "%s: %s" % ( "Status", responseStatus )
-    #print "%s: %s" % ( "Reason", responseReason )
-    #print "-----"
-    #print json.dumps(parsed_response, sort_keys=True, indent=4, separators=(',', ': '))
-    #print "******"
 
     return parsed_response
 
