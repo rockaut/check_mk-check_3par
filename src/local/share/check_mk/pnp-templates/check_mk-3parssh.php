@@ -63,7 +63,7 @@ if( $servicedesc == "Status_CPU_Stats" ) {
   $i          = 1;
 
   $ds_name[$optCount]     = "sys_nX";
-  $opt[$optCount]  = "--title 'System Times' --height 180 --end=+10minutes";
+  $opt[$optCount]  = "--title 'System Times' --upper-limit 105 --lower-limit -105 --rigid --height 180 --end=+10minutes";
   $def[$defCount]  = "";
   $def[$defCount] .= "HRULE:0#555 ";
   for( $nodeId = 0; $nodeId < $nodesCount; $nodeId++ ) {
@@ -101,7 +101,7 @@ if( $servicedesc == "Status_CPU_Stats" ) {
   $i          = 1;
 
   $ds_name[$optCount]     = "user_nX";
-  $opt[$optCount]  = "--title 'System Times' --height 180 --end=+10minutes";
+  $opt[$optCount]  = "--title 'User Times' --upper-limit 105 --lower-limit -105 --rigid --height 180 --end=+10minutes";
   $def[$defCount]  = "";
   $def[$defCount] .= "HRULE:0#555 ";
   for( $nodeId = 0; $nodeId < $nodesCount; $nodeId++ ) {
@@ -139,7 +139,7 @@ if( $servicedesc == "Status_CPU_Stats" ) {
   $i          = 1;
 
   $ds_name[$optCount]     = "intr_nX";
-  $opt[$optCount]  = "--title 'System Times' --height 180 --end=+10minutes";
+  $opt[$optCount]  = "--title 'Interrupts' --height 180 --end=+10minutes";
   $def[$defCount]  = "";
   $def[$defCount] .= "HRULE:0#555 ";
   for( $nodeId = 0; $nodeId < $nodesCount; $nodeId++ ) {
@@ -173,12 +173,12 @@ if( $servicedesc == "Status_CPU_Stats" ) {
   #----------------------------------------------------------------------------------------------
   
   $rrdFileFmt = $rrdBaseDir . "/Status_CPU_Stats_ctxt_n%s.rrd";
-  $optCount   = 4;
-  $defCount   = 4;
+  $optCount   = 5;
+  $defCount   = 5;
   $i          = 1;
 
   $ds_name[$optCount]     = "ctxt_nX";
-  $opt[$optCount]  = "--title 'System Times' --height 180 --end=+10minutes";
+  $opt[$optCount]  = "--title 'Context Switches' --height 180 --end=+10minutes";
   $def[$defCount]  = "";
   $def[$defCount] .= "HRULE:0#555 ";
   for( $nodeId = 0; $nodeId < $nodesCount; $nodeId++ ) {
