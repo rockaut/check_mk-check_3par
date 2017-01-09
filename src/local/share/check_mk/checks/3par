@@ -382,6 +382,8 @@ def check_3par_hosts(item, params, parsed):
                 perfdata.append( ( "KBytes_total_sum", KBytes_total_sum ) )
                 perfdata.append( ( "queueLength_sum", queueLength_sum ) )
 
+            if state < 0:
+                state = 3
             return ( state, infotext, perfdata )
 
 def get_hostports_state(host, params, parsed):
@@ -435,7 +437,7 @@ def inventory_3par_cpgs(parsed):
     return inventory
 
 def check_3par_cpgs(item, params, parsed):
-    state       = 3
+    state       = -1
     infotext    = "No item implemented"
     perfdata    = []
 
@@ -467,18 +469,18 @@ def check_3par_cpgs(item, params, parsed):
                 crit_mb = crit_mb * -1
                 warn_mb = warn_mb * -1
                 if rest_mb <= crit_mb:
-                    state = 2
+                    state = max(2, state)
                 elif rest_mb <= warn_mb:
                     state = max(1, state)
                 else:
-                    state = 0
+                    state = max(0, state)
             else:
                 if used_mb >= crit_mb:
-                    state = 2
+                    state = max(2, state)
                 elif used_mb >= warn_mb:
                     state = max(1, state)
                 else:
-                    state = 0
+                    state = max(0, state)
 
             if cstate >= levels["cpgstatus_critical"]:
                 state = max(2, state)
@@ -506,6 +508,8 @@ def check_3par_cpgs(item, params, parsed):
 
             perfdata.append( ( "UsrUsedMiB", cpg["UsrUsage"]["usedMiB"], warn_mb, crit_mb, 0, cpg["UsrUsage"]["totalMiB"] ) )
 
+            if state < 0:
+                state = 3
             return ( state, infotext, perfdata )
 
 check_info["3par.cpgs"] = {
