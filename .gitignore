@@ -94,3 +94,5 @@ test.txt
 test.json
 
 \.vscode/
+
+src/local/share/check_mk/agents/special/agent_3parTest
