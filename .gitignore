@@ -92,3 +92,5 @@ ENV/
 test.txt
 *.mkp
 test.json
+
+\.vscode/
