@@ -450,11 +450,18 @@ def check_3par_cpgs(item, params, parsed):
 
             used_mb = cpg["UsrUsage"]["usedMiB"] * 1.048576
             size_mb = cpg["UsrUsage"]["totalMiB"] * 1.048576
-            used_perc = 100.0 * (float(used_mb) / size_mb)
-            size_gb   = size_mb / 1024.0
-            used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
-            size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
-            cstate = cpg["state"] - 1
+            if size_mb > 0:
+                used_perc = 100.0 * (float(used_mb) / size_mb)
+                size_gb   = size_mb / 1024.0
+                used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
+                size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
+                cstate = cpg["state"] - 1
+            else:
+                used_perc   = 0
+                size_gb     = 0
+                used_hr     = "0 MB"
+                size_hr     = "0 MB"
+                cstate      = cpg["state"] - 1
 
             # If both numbers end with both MB or GB or TB, then drop the first one
             if used_hr[-2:] == size_hr[-2:]:
@@ -463,24 +470,25 @@ def check_3par_cpgs(item, params, parsed):
             levels = get_filesystem_levels("bla", "cpg", size_gb, params)
             warn_mb, crit_mb       = levels["levels_mb"]
 
-            if warn_mb <= -1:
-                #Negativ levels, so calculate mb left
-                rest_mb = size_mb - used_mb
-                crit_mb = crit_mb * -1
-                warn_mb = warn_mb * -1
-                if rest_mb <= crit_mb:
-                    state = max(2, state)
-                elif rest_mb <= warn_mb:
-                    state = max(1, state)
+            if size_mb > 0:
+                if warn_mb <= -1:
+                    #Negativ levels, so calculate mb left
+                    rest_mb = size_mb - used_mb
+                    crit_mb = crit_mb * -1
+                    warn_mb = warn_mb * -1
+                    if rest_mb <= crit_mb:
+                        state = max(2, state)
+                    elif rest_mb <= warn_mb:
+                        state = max(1, state)
+                    else:
+                        state = max(0, state)
                 else:
-                    state = max(0, state)
-            else:
-                if used_mb >= crit_mb:
-                    state = max(2, state)
-                elif used_mb >= warn_mb:
-                    state = max(1, state)
-                else:
-                    state = max(0, state)
+                    if used_mb >= crit_mb:
+                        state = max(2, state)
+                    elif used_mb >= warn_mb:
+                        state = max(1, state)
+                    else:
+                        state = max(0, state)
 
             if cstate >= levels["cpgstatus_critical"]:
                 state = max(2, state)
@@ -510,6 +518,7 @@ def check_3par_cpgs(item, params, parsed):
 
             if state < 0:
                 state = 3
+
             return ( state, infotext, perfdata )
 
 check_info["3par.cpgs"] = {
