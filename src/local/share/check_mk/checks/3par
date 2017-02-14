@@ -1080,8 +1080,9 @@ check_info["3par.remotecopygroups"] = {
 hp3par_physicaldisks_default_levels = {}
 factory_settings["hp3par_physicaldisks_default_levels"] = {
     "pdCountLevels":     ( 2, 1 ),
+    "pdFailedLevels":    ( 1, 2 ),
     "lifeLeftPctLevels": ( 50, 30 ),
-    "tempLevels":        ( 35, 40 ),
+    "tempLevels":        ( 40, 50 ),
     "busyPctLevels":     ( 80, 90 ),
     "queueLengthLevels": ( 200, 350 ),
     "serviceTimeMSLevels": ( 10, 15 ),
@@ -1131,6 +1132,7 @@ def check_3par_physicaldisks(item, params, parsed):
     perfdata = []
 
     pd_count = 0
+    pd_failed = 0
 
     lifeLeftPct_min = 100
     lifeLeftPct_max = 0
@@ -1175,16 +1177,26 @@ def check_3par_physicaldisks(item, params, parsed):
             state = max( state, 0 )
 
         perfdata.append( ( "pd_count", pd_count ) )
-        infotext = "%s disks present" % ( pd_count )
+        infotext = "%s disks" % ( pd_count )
 
     if "sysrep_physicaldiskspacedata" in parsed:
         for pd in parsed["sysrep_physicaldiskspacedata"]["members"]:
             if pd["type"] != pd_type:
                 continue
 
-            temp_min = min( temp_min, pd["temperatureC"] )
-            temp_max = max( temp_max, pd["temperatureC"] )
-            temp_sum += pd["temperatureC"]
+            try:
+                pdTempC = int(pd["temperatureC"])
+            except ValueError:
+                pdTempC = 0
+
+            if pdTempC > 1:
+                temp_min = min( temp_min, pdTempC )
+            if pd["temperatureC"] < 254:
+                temp_max = max( temp_max, pdTempC )
+            temp_sum += pdTempC
+
+            if pd["spareChunklets"]["availClean"] <= 0:
+                pd_failed += 1
 
             # only SSD shows wear gauge
             if pd["type"] != 3:
@@ -1193,6 +1205,16 @@ def check_3par_physicaldisks(item, params, parsed):
             lifeLeftPct_min = min( lifeLeftPct_min, pd["lifeLeftPct"] )
             lifeLeftPct_max = max( lifeLeftPct_max, pd["lifeLeftPct"] )
             lifeLeftPct_sum += pd["lifeLeftPct"]
+
+        perfdata.append( ( "pd_failed", pd_failed ) )
+        if pd_failed >= params["pdFailedLevels"][1]:
+            state = max( state, 2 )
+            infotext += " - %s failed(!!)" % ( pd_failed )
+        elif pd_failed >= params["pdFailedLevels"][0]:
+            state = max( state, 1 )
+            infotext += " - %s failed(!)" % ( pd_failed )
+        else:
+            state = max( state, 0 )
 
         temp_avg = temp_sum / pd_count
 
@@ -1205,8 +1227,11 @@ def check_3par_physicaldisks(item, params, parsed):
         else:
             state = max( state, 0 )
 
-        perfdata.append( ( "temp_min", temp_min ) )
-        perfdata.append( ( "temp_max", temp_max, params["tempLevels"][0], params["tempLevels"][1] ) )
+        if temp_min > 1:
+            perfdata.append( ( "temp_min", temp_min ) )
+        if temp_max < 254:
+            perfdata.append( ( "temp_max", temp_max, params["tempLevels"][0], params["tempLevels"][1] ) )
+        
         perfdata.append( ( "temp_avg", temp_avg ) )
 
         # only SSD shows wear gauge
