@@ -245,7 +245,7 @@ def get_sysrep_physicaldiskcapacity( sessionKey, sessionHost, sessionPort = 8080
     return parsed_response
 
 def get_sysrep_physicaldiskspacedata( sessionKey, sessionHost, sessionPort = 8080 ):
-    qUrl = '/api/v1/systemreporter/attime/physicaldiskspacedata/hires'
+    qUrl = '/api/v1/systemreporter/attime/physicaldiskspacedata/hourly'
     apiHeaders = build_apiHeaders( sessionKey )
 
     conn = httplib.HTTPSConnection( sessionHost, sessionPort, timeout=10)

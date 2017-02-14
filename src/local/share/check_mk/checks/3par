@@ -1138,7 +1138,7 @@ def check_3par_physicaldisks(item, params, parsed):
     lifeLeftPct_max = 0
     lifeLeftPct_sum = 0
 
-    temp_min = 999
+    temp_min = 255
     temp_max = 0
     temp_sum = 0
 
@@ -1184,19 +1184,19 @@ def check_3par_physicaldisks(item, params, parsed):
             if pd["type"] != pd_type:
                 continue
 
+            if pd["spareChunklets"]["availClean"] <= 0:
+                pd_failed += 1
+                continue
+
             try:
                 pdTempC = int(pd["temperatureC"])
             except ValueError:
                 pdTempC = 0
 
-            if pdTempC > 1:
-                temp_min = min( temp_min, pdTempC )
-            if pd["temperatureC"] < 254:
+            temp_min = min( temp_min, pdTempC )
+            if temp_max < 255:
                 temp_max = max( temp_max, pdTempC )
             temp_sum += pdTempC
-
-            if pd["spareChunklets"]["availClean"] <= 0:
-                pd_failed += 1
 
             # only SSD shows wear gauge
             if pd["type"] != 3:
@@ -1216,7 +1216,7 @@ def check_3par_physicaldisks(item, params, parsed):
         else:
             state = max( state, 0 )
 
-        temp_avg = temp_sum / pd_count
+        temp_avg = temp_sum / ( pd_count - pd_failed )
 
         if temp_max >= params["tempLevels"][1]:
             state = max( state, 2 )
@@ -1227,11 +1227,8 @@ def check_3par_physicaldisks(item, params, parsed):
         else:
             state = max( state, 0 )
 
-        if temp_min > 1:
-            perfdata.append( ( "temp_min", temp_min ) )
-        if temp_max < 254:
-            perfdata.append( ( "temp_max", temp_max, params["tempLevels"][0], params["tempLevels"][1] ) )
-        
+        perfdata.append( ( "temp_min", temp_min ) )
+        perfdata.append( ( "temp_max", temp_max, params["tempLevels"][0], params["tempLevels"][1] ) )
         perfdata.append( ( "temp_avg", temp_avg ) )
 
         # only SSD shows wear gauge
