@@ -92,3 +92,9 @@ ENV/
 test.txt
 *.mkp
 test.json
+
+\.vscode/
+
+src/local/share/check_mk/agents/special/agent_3parTest
+
+src/local/share/check_mk/checks/3par\.diff

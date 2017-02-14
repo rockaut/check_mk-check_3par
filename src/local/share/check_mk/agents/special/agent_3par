@@ -321,6 +321,7 @@ def print_usage():
 #   +----------------------------------------------------------------------+
 
 _defaultValues = [ "system", "cpgs", "volumes", "flashcache", "ssh" ]
+_sysrep_ignoreCodes = [ 9, 70 ]
 
 def main( argv ):
     fetchValues = _defaultValues
@@ -332,7 +333,7 @@ def main( argv ):
     sshUser = ''
 
     try:
-        opts, args = getopt.getopt( argv, "hH:hU:hP:hv:hs:", ["Host=", "User=", "Password=", "Values=", "sshuser="])
+        opts, args = getopt.getopt( argv, "hH:U:P:v:s:", ["Host=", "User=", "Password=", "Values=", "sshuser="])
         if not opts:
             print_usage()
             sys.exit(2)
@@ -355,7 +356,7 @@ def main( argv ):
         elif opt in ("-s", "--sshuser"):
             sshUser = arg
 
-    if sessionHost == "" or sessionUser == "" or sessionPassword == "" or sshUser == "":
+    if sessionHost == "" or sessionUser == "" or sessionPassword == "":
         print_usage()
         sys.exit(2)
 
@@ -396,51 +397,52 @@ def main( argv ):
         result["remotecopygroups"] = remotecopygroups
 
         sysrep_cpgstatistics = get_sysrep_cpgstatistics( sessionKey, sessionHost )
-        if "code" in sysrep_cpgstatistics and sysrep_cpgstatistics["code"] == 9:
+        if "code" in sysrep_cpgstatistics and sysrep_cpgstatistics["code"] in _sysrep_ignoreCodes:
             pass
         else:
             result["sysrep_cpgstatistics"] = sysrep_cpgstatistics
         
         sysrep_physicaldiskcapacity = get_sysrep_physicaldiskcapacity( sessionKey, sessionHost )
-        if "code" in sysrep_physicaldiskcapacity and sysrep_physicaldiskcapacity["code"] == 9:
+        if "code" in sysrep_physicaldiskcapacity and sysrep_physicaldiskcapacity["code"] in _sysrep_ignoreCodes:
             pass
         else:
             result["sysrep_physicaldiskcapacity"] = sysrep_physicaldiskcapacity
 
         sysrep_physicaldiskspacedata = get_sysrep_physicaldiskspacedata( sessionKey, sessionHost )
-        if "code" in sysrep_physicaldiskspacedata and sysrep_physicaldiskspacedata["code"] == 9:
+        if "code" in sysrep_physicaldiskspacedata and sysrep_physicaldiskspacedata["code"] in _sysrep_ignoreCodes:
             pass
         else:
             result["sysrep_physicaldiskspacedata"] = sysrep_physicaldiskspacedata
 
         sysrep_physicaldiskstatistics = get_sysrep_physicaldiskstatistics( sessionKey, sessionHost )
-        if "code" in sysrep_physicaldiskstatistics and sysrep_physicaldiskstatistics["code"] == 9:
+        if "code" in sysrep_physicaldiskstatistics and sysrep_physicaldiskstatistics["code"] in _sysrep_ignoreCodes:
             pass
         else:
             result["sysrep_physicaldiskstatistics"] = sysrep_physicaldiskstatistics
         
         sysrep_cachememorystatistics = get_sysrep_cachememorystatistics( sessionKey, sessionHost )
-        if "code" in sysrep_cachememorystatistics and sysrep_cachememorystatistics["code"] == 9:
+        if "code" in sysrep_cachememorystatistics and sysrep_cachememorystatistics["code"] in _sysrep_ignoreCodes:
             pass
         else:
             result["sysrep_cachememorystatistics"] = sysrep_cachememorystatistics
         
         sysrep_portstatistics = get_sysrep_portstatistics( sessionKey, sessionHost )
-        if "code" in sysrep_portstatistics and sysrep_portstatistics["code"] == 9:
+        if "code" in sysrep_portstatistics and sysrep_portstatistics["code"] in _sysrep_ignoreCodes:
             pass
         else:
             result["sysrep_portstatistics"] = sysrep_portstatistics
         
         sysrep_vlunstatistics = get_sysrep_vlunstatistics( sessionKey, sessionHost )
-        if "code" in sysrep_vlunstatistics and sysrep_vlunstatistics["code"] == 9:
+        if "code" in sysrep_vlunstatistics and sysrep_vlunstatistics["code"] in _sysrep_ignoreCodes:
             pass
         else:
             result["sysrep_vlunstatistics"] = sysrep_vlunstatistics
 
         print json.dumps(result, sort_keys=True, indent=4, separators=(',', ': '))
         
-        cmdSsh = "%s/agent_3parssh %s %s" % ( os.path.dirname(__file__), sessionHost, sshUser )
-        print subprocess.check_output( cmdSsh, shell=True, executable='/bin/bash' )
+        if sshUser != "":
+            cmdSsh = "%s/agent_3parssh %s %s" % ( os.path.dirname(__file__), sessionHost, sshUser )
+            print subprocess.check_output( cmdSsh, shell=True, executable='/bin/bash' )
         
     except:
         print("Unexpected error:", sys.exc_info()[0])

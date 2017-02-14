@@ -450,11 +450,18 @@ def check_3par_cpgs(item, params, parsed):
 
             used_mb = cpg["UsrUsage"]["usedMiB"] * 1.048576
             size_mb = cpg["UsrUsage"]["totalMiB"] * 1.048576
-            used_perc = 100.0 * (float(used_mb) / size_mb)
-            size_gb   = size_mb / 1024.0
-            used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
-            size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
-            cstate = cpg["state"] - 1
+            if size_mb > 0:
+                used_perc = 100.0 * (float(used_mb) / size_mb)
+                size_gb   = size_mb / 1024.0
+                used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
+                size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
+                cstate = cpg["state"] - 1
+            else:
+                used_perc   = 0
+                size_gb     = 0
+                used_hr     = "0 MB"
+                size_hr     = "0 MB"
+                cstate      = cpg["state"] - 1
 
             # If both numbers end with both MB or GB or TB, then drop the first one
             if used_hr[-2:] == size_hr[-2:]:
@@ -463,24 +470,25 @@ def check_3par_cpgs(item, params, parsed):
             levels = get_filesystem_levels("bla", "cpg", size_gb, params)
             warn_mb, crit_mb       = levels["levels_mb"]
 
-            if warn_mb <= -1:
-                #Negativ levels, so calculate mb left
-                rest_mb = size_mb - used_mb
-                crit_mb = crit_mb * -1
-                warn_mb = warn_mb * -1
-                if rest_mb <= crit_mb:
-                    state = max(2, state)
-                elif rest_mb <= warn_mb:
-                    state = max(1, state)
+            if size_mb > 0:
+                if warn_mb <= -1:
+                    #Negativ levels, so calculate mb left
+                    rest_mb = size_mb - used_mb
+                    crit_mb = crit_mb * -1
+                    warn_mb = warn_mb * -1
+                    if rest_mb <= crit_mb:
+                        state = max(2, state)
+                    elif rest_mb <= warn_mb:
+                        state = max(1, state)
+                    else:
+                        state = max(0, state)
                 else:
-                    state = max(0, state)
-            else:
-                if used_mb >= crit_mb:
-                    state = max(2, state)
-                elif used_mb >= warn_mb:
-                    state = max(1, state)
-                else:
-                    state = max(0, state)
+                    if used_mb >= crit_mb:
+                        state = max(2, state)
+                    elif used_mb >= warn_mb:
+                        state = max(1, state)
+                    else:
+                        state = max(0, state)
 
             if cstate >= levels["cpgstatus_critical"]:
                 state = max(2, state)
@@ -510,6 +518,7 @@ def check_3par_cpgs(item, params, parsed):
 
             if state < 0:
                 state = 3
+
             return ( state, infotext, perfdata )
 
 check_info["3par.cpgs"] = {
@@ -1071,8 +1080,9 @@ check_info["3par.remotecopygroups"] = {
 hp3par_physicaldisks_default_levels = {}
 factory_settings["hp3par_physicaldisks_default_levels"] = {
     "pdCountLevels":     ( 2, 1 ),
+    "pdFailedLevels":    ( 1, 2 ),
     "lifeLeftPctLevels": ( 50, 30 ),
-    "tempLevels":        ( 35, 40 ),
+    "tempLevels":        ( 40, 50 ),
     "busyPctLevels":     ( 80, 90 ),
     "queueLengthLevels": ( 200, 350 ),
     "serviceTimeMSLevels": ( 10, 15 ),
@@ -1122,6 +1132,7 @@ def check_3par_physicaldisks(item, params, parsed):
     perfdata = []
 
     pd_count = 0
+    pd_failed = 0
 
     lifeLeftPct_min = 100
     lifeLeftPct_max = 0
@@ -1166,16 +1177,26 @@ def check_3par_physicaldisks(item, params, parsed):
             state = max( state, 0 )
 
         perfdata.append( ( "pd_count", pd_count ) )
-        infotext = "%s disks present" % ( pd_count )
+        infotext = "%s disks" % ( pd_count )
 
     if "sysrep_physicaldiskspacedata" in parsed:
         for pd in parsed["sysrep_physicaldiskspacedata"]["members"]:
             if pd["type"] != pd_type:
                 continue
 
-            temp_min = min( temp_min, pd["temperatureC"] )
-            temp_max = max( temp_max, pd["temperatureC"] )
-            temp_sum += pd["temperatureC"]
+            try:
+                pdTempC = int(pd["temperatureC"])
+            except ValueError:
+                pdTempC = 0
+
+            if pdTempC > 1:
+                temp_min = min( temp_min, pdTempC )
+            if pd["temperatureC"] < 254:
+                temp_max = max( temp_max, pdTempC )
+            temp_sum += pdTempC
+
+            if pd["spareChunklets"]["availClean"] <= 0:
+                pd_failed += 1
 
             # only SSD shows wear gauge
             if pd["type"] != 3:
@@ -1184,6 +1205,16 @@ def check_3par_physicaldisks(item, params, parsed):
             lifeLeftPct_min = min( lifeLeftPct_min, pd["lifeLeftPct"] )
             lifeLeftPct_max = max( lifeLeftPct_max, pd["lifeLeftPct"] )
             lifeLeftPct_sum += pd["lifeLeftPct"]
+
+        perfdata.append( ( "pd_failed", pd_failed ) )
+        if pd_failed >= params["pdFailedLevels"][1]:
+            state = max( state, 2 )
+            infotext += " - %s failed(!!)" % ( pd_failed )
+        elif pd_failed >= params["pdFailedLevels"][0]:
+            state = max( state, 1 )
+            infotext += " - %s failed(!)" % ( pd_failed )
+        else:
+            state = max( state, 0 )
 
         temp_avg = temp_sum / pd_count
 
@@ -1196,8 +1227,11 @@ def check_3par_physicaldisks(item, params, parsed):
         else:
             state = max( state, 0 )
 
-        perfdata.append( ( "temp_min", temp_min ) )
-        perfdata.append( ( "temp_max", temp_max, params["tempLevels"][0], params["tempLevels"][1] ) )
+        if temp_min > 1:
+            perfdata.append( ( "temp_min", temp_min ) )
+        if temp_max < 254:
+            perfdata.append( ( "temp_max", temp_max, params["tempLevels"][0], params["tempLevels"][1] ) )
+        
         perfdata.append( ( "temp_avg", temp_avg ) )
 
         # only SSD shows wear gauge
