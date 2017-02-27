@@ -791,11 +791,10 @@ def check_3par_ports(item, params, parsed):
             portName    = ""
             portPos     = ""
 
-            if "label" in port:
-                if "portWWN" in port:
-                    portName = port["label"] + "-" + port["portWWN"]
-                else:
-                    portName = port["label"]
+            if "label" in port and "portWWN" in port:
+                portName = port["label"] + "-" + port["portWWN"]
+            elif "label" in port:
+                portName = port["label"]
             elif "portWWN" in port:
                 portName = port["portWWN"]
 
@@ -1086,6 +1085,9 @@ factory_settings["hp3par_physicaldisks_default_levels"] = {
     "busyPctLevels":     ( 80, 90 ),
     "queueLengthLevels": ( 200, 350 ),
     "serviceTimeMSLevels": ( 10, 15 ),
+    "serviceTimeMSLevels_SSD": ( 10, 15 ),
+    "serviceTimeMSLevels_FC": ( 25, 35 ),
+    "serviceTimeMSLevels_NL": ( 75, 100 ),
 }
 
 hp3par_pdType = {
@@ -1156,10 +1158,13 @@ def check_3par_physicaldisks(item, params, parsed):
 
     if item == "PD Summary - FC":
         pd_type = 1
+        stKey = "serviceTimeMSLevels_FC"
     if item == "PD Summary - NL":
         pd_type = 2
+        stKey = "serviceTimeMSLevels_NL"
     if item == "PD Summary - SSD":
         pd_type = 3
+        stKey = "serviceTimeMSLevels_SSD"
 
     # Todo: failed capacity
 
@@ -1287,12 +1292,12 @@ def check_3par_physicaldisks(item, params, parsed):
         else:
             state = max( state, 0 )
 
-        if serviceTimeMS_total_max >= params["serviceTimeMSLevels"][1]:
+        if serviceTimeMS_total_max >= params[stKey][1]:
             state = max( state, 2 )
-            infotext += " - max. %s ms (!!)" % ( serviceTimeMS_total_max )
-        elif serviceTimeMS_total_max >= params["serviceTimeMSLevels"][0]:
+            infotext += " - max. %s ms (!!)(levels at %s/%s)" % ( serviceTimeMS_total_max, params[stKey][0], params[stKey][1] )
+        elif serviceTimeMS_total_max >= params[stKey][0]:
             state = max( state, 1 )
-            infotext += " - max. %s ms (!)" % ( serviceTimeMS_total_max )
+            infotext += " - max. %s ms (!)(levels at %s/%s)" % ( serviceTimeMS_total_max, params[stKey][0], params[stKey][1] )
         else:
             state = max( state, 0 )
             infotext += " - max. %s ms" % ( serviceTimeMS_total_max )
