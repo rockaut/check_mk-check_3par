@@ -1086,7 +1086,7 @@ factory_settings["hp3par_physicaldisks_default_levels"] = {
     "queueLengthLevels": ( 200, 350 ),
     "serviceTimeMSLevels": ( 10, 15 ),
     "serviceTimeMSLevels_SSD": ( 10, 15 ),
-    "serviceTimeMSLevels_FC": ( 25, 35 ),
+    "serviceTimeMSLevels_FC": ( 35, 45 ),
     "serviceTimeMSLevels_NL": ( 75, 100 ),
 }
 
@@ -1268,7 +1268,7 @@ def check_3par_physicaldisks(item, params, parsed):
 
             serviceTimeMS_total_min = min( serviceTimeMS_total_min, pd["serviceTimeMS"]["total"] )
             serviceTimeMS_total_max = max( serviceTimeMS_total_max, pd["serviceTimeMS"]["total"] )
-            serviceTimeMS_total_sum = pd["serviceTimeMS"]["total"]
+            serviceTimeMS_total_sum += pd["serviceTimeMS"]["total"]
 
         busyPct_avg     = busyPct_sum / pd_count
         queueLength_avg = queueLength_sum / pd_count
@@ -1300,7 +1300,7 @@ def check_3par_physicaldisks(item, params, parsed):
             infotext += " - max. %s ms (!)(levels at %s/%s)" % ( serviceTimeMS_total_max, params[stKey][0], params[stKey][1] )
         else:
             state = max( state, 0 )
-            infotext += " - max. %s ms" % ( serviceTimeMS_total_max )
+            infotext += " - max. %s ms ( Avg. %s ms )" % ( serviceTimeMS_total_max, serviceTimeMS_total_avg )
 
         perfdata.append( ( "busyPct_min", busyPct_min, 0, 0, 0, 100 ) )
         perfdata.append( ( "busyPct_max", busyPct_max, params["busyPctLevels"][0], params["busyPctLevels"][1], 0, 100 ) )
@@ -1311,7 +1311,7 @@ def check_3par_physicaldisks(item, params, parsed):
         perfdata.append( ( "queueLength_avg", queueLength_avg, 0, 0, 0, 100 ) )
 
         perfdata.append( ( "serviceTimeMS_total_min", serviceTimeMS_total_min, 0, 0, 0, 100 ) )
-        perfdata.append( ( "serviceTimeMS_total_max", serviceTimeMS_total_max, params["serviceTimeMSLevels"][0], params["serviceTimeMSLevels"][1], 0, 100 ) )
+        perfdata.append( ( "serviceTimeMS_total_max", serviceTimeMS_total_max, params[stKey][0], params[stKey][1], 0, 100 ) )
         perfdata.append( ( "serviceTimeMS_total_avg", serviceTimeMS_total_avg, 0, 0, 0, 100 ) )
 
     if state == -1:
