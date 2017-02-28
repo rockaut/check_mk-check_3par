@@ -665,44 +665,59 @@ def check_3par_vols(item, params, parsed):
                 continue
 
             vstate = vol["state"] - 1
-
             used_mb = vol["userSpace"]["usedMiB"] * 1.048576
             size_mb = vol["sizeMiB"] * 1.048576
-            used_perc = 100.0 * (float(used_mb) / size_mb)
-            size_gb   = size_mb / 1024.0
-            used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
-            size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
+            avail_mb = size_mb -used_mb
             cstate = vol["state"] - 1
+            warn_grade = params["compaction_grade"][0]
+            crit_grade = params["compaction_grade"][1]
 
-            # If both numbers end with both MB or GB or TB, then drop the first one
-            if used_hr[-2:] == size_hr[-2:]:
-                used_hr = used_hr[:-3]
+            #if "Placeholder_" in item:
+            state, infotext, perfdata = df_check_filesystem_single("3Par", "volume", size_mb, avail_mb, None, None, params)
+                #return ( state, infotext, perfdata )
+            #else:
+            #    used_perc = 100.0 * (float(used_mb) / size_mb)
+            #    size_gb   = size_mb / 1024.0
+            #    used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
+            #    size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
 
-            levels = get_filesystem_levels("bla", "volume", size_gb, params)
-            warn_mb, crit_mb       = levels["levels_mb"]
-            warn_grade, crit_grade = levels["compaction_grade"]
+                # If both numbers end with both MB or GB or TB, then drop the first one
+            #    if used_hr[-2:] == size_hr[-2:]:
+            #        used_hr = used_hr[:-3]
 
-            if warn_mb <= -1:
-                #Negativ levels, so calculate mb left
-                rest_mb = size_mb - used_mb
-                crit_mb = crit_mb * -1
-                warn_mb = warn_mb * -1
-                if rest_mb <= crit_mb:
-                    state = max(2, state)
-                elif rest_mb <= warn_mb:
-                    state = max(1, state)
-                else:
-                    state = max(0, state)
-            else:
-                if used_mb >= crit_mb:
-                    state = max(2, state)
-                elif used_mb >= warn_mb:
-                    state = max(1, state)
-                else:
-                    state = max(0, state)
-            if vstate >= levels["volstatus_critical"]:
+            #    levels = get_filesystem_levels("bla", "volume", size_gb, params)
+            #    warn_mb, crit_mb       = levels["levels_mb"]
+                
+            #    if warn_mb <= -1:
+            #        #Negativ levels, so calculate mb left
+            #        rest_mb = size_mb - used_mb
+            #        crit_mb = crit_mb * -1
+            #        warn_mb = warn_mb * -1
+            #        if rest_mb <= crit_mb:
+            #            state = max(2, state)
+            #        elif rest_mb <= warn_mb:
+            #            state = max(1, state)
+            #        else:
+            #            state = max(0, state)
+            #    else:
+            #        if used_mb >= crit_mb:
+            #            state = max(2, state)
+            #        elif used_mb >= warn_mb:
+            #            state = max(1, state)
+            #        else:
+            #            state = max(0, state)
+
+            #    if used_perc > 0:
+            #        perc_precision = max(1, 2 - int(round(math.log(used_perc, 10))))
+            #    else:
+            #        perc_precision = 1
+            #    infotext += "%%.%df%%%% used (%%s of %%s), %%s" % perc_precision % (used_perc, used_hr, size_hr, levels["levels_text"])
+
+            #    perfdata.append( ( "UsrUsedMiB", vol["userSpace"]["usedMiB"], warn_mb, crit_mb, vol["sizeMiB"] ) )
+
+            if vstate >= params["volstatus_critical"]:
                 state = max(2, state)
-            elif vstate >= levels["volstatus_warning"]:
+            elif vstate >= params["volstatus_warning"]:
                 state = max(1, state)
             else:
                 state = max(0, state)
@@ -716,15 +731,8 @@ def check_3par_vols(item, params, parsed):
             else:
                 stateWord = "UNKNOWN"
 
-            infotext = "%s - ID %s" % ( stateWord, vol["baseId"] )
+            infotext = "%s - ID %s - %s" % ( stateWord, vol["baseId"], infotext )
 
-            if used_perc > 0:
-                perc_precision = max(1, 2 - int(round(math.log(used_perc, 10))))
-            else:
-                perc_precision = 1
-            infotext += " - %%.%df%%%% used (%%s of %%s), %%s" % perc_precision % (used_perc, used_hr, size_hr, levels["levels_text"])
-
-            perfdata.append( ( "UsrUsedMiB", vol["userSpace"]["usedMiB"], warn_mb, crit_mb, vol["sizeMiB"] ) )
             perfdata.append( ( "Compaction", vol["capacityEfficiency"]["compaction"], warn_grade, crit_grade ) )
 
             if "sysrep_vlunstatistics" in parsed:
@@ -755,6 +763,7 @@ check_info["3par.vols"] = {
     'service_description':      'Vol Status - %s',
     "has_perfdata"        :     True,
     'group':                    '3par_volumes',
+    #"includes"                : [ "df.include" ],
 }
 
 
@@ -1294,13 +1303,13 @@ def check_3par_physicaldisks(item, params, parsed):
 
         if serviceTimeMS_total_max >= params[stKey][1]:
             state = max( state, 2 )
-            infotext += " - max. %s ms (!!)(levels at %s/%s)" % ( serviceTimeMS_total_max, params[stKey][0], params[stKey][1] )
+            infotext += " - max. %0.0f ms (!!)(levels at %0.0f/%0.0f)" % ( serviceTimeMS_total_max, params[stKey][0], params[stKey][1] )
         elif serviceTimeMS_total_max >= params[stKey][0]:
             state = max( state, 1 )
-            infotext += " - max. %s ms (!)(levels at %s/%s)" % ( serviceTimeMS_total_max, params[stKey][0], params[stKey][1] )
+            infotext += " - max. %0.0f ms (!)(levels at %0.0f/%0.0f)" % ( serviceTimeMS_total_max, params[stKey][0], params[stKey][1] )
         else:
             state = max( state, 0 )
-            infotext += " - max. %s ms ( Avg. %s ms )" % ( serviceTimeMS_total_max, serviceTimeMS_total_avg )
+            infotext += " - max. %0.0f ms ( Avg. %0.0f ms )" % ( serviceTimeMS_total_max, serviceTimeMS_total_avg )
 
         perfdata.append( ( "busyPct_min", busyPct_min, 0, 0, 0, 100 ) )
         perfdata.append( ( "busyPct_max", busyPct_max, params["busyPctLevels"][0], params["busyPctLevels"][1], 0, 100 ) )
