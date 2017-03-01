@@ -160,7 +160,7 @@ if (isset($RRD['trend_hoursleft'])) {
 }
 
 /*
-Array (
+$NAMES = Array (
     [1] => volume
     [2] => growth
     [3] => trend
@@ -199,14 +199,18 @@ $RRDFILE = Array (
     [10] => /omd/sites/nagios/var/pnp4nagios/perfdata/3Par1/Vol_Status_-_Placeholder_FC_ER_serviceTimeMS_total_max.rrd
 )
 
+ Array (
+    [1] => /omd/sites/nagios/var/pnp4nagios/perfdata/3Par1/Vol_Status_-_G9WIN1_TS_C1AO_GG01_volume.rrd [2] => /omd/sites/nagios/var/pnp4nagios/perfdata/3Par1/Vol_Status_-_G9WIN1_TS_C1AO_GG01_growth.rrd [3] => /omd/sites/nagios/var/pnp4nagios/perfdata/3Par1/Vol_Status_-_G9WIN1_TS_C1AO_GG01_trend.rrd [4] => /omd/sites/nagios/var/pnp4nagios/perfdata/3Par1/Vol_Status_-_G9WIN1_TS_C1AO_GG01_trend_hoursleft.rrd [5] => /omd/sites/nagios/var/pnp4nagios/perfdata/3Par1/Vol_Status_-_G9WIN1_TS_C1AO_GG01_Compaction.rrd [6] => /omd/sites/nagios/var/pnp4nagios/perfdata/3Par1/Vol_Status_-_G9WIN1_TS_C1AO_GG01_IO_read.rrd [7] => /omd/sites/nagios/var/pnp4nagios/perfdata/3Par1/Vol_Status_-_G9WIN1_TS_C1AO_GG01_IO_write.rrd [8] => /omd/sites/nagios/var/pnp4nagios/perfdata/3Par1/Vol_Status_-_G9WIN1_TS_C1AO_GG01_IO_total.rrd [9] => /omd/sites/nagios/var/pnp4nagios/perfdata/3Par1/Vol_Status_-_G9WIN1_TS_C1AO_GG01_serviceTimeMS_read_max.rrd [10] => /omd/sites/nagios/var/pnp4nagios/perfdata/3Par1/Vol_Status_-_G9WIN1_TS_C1AO_GG01_serviceTimeMS_write_max.rrd [11] => /omd/sites/nagios/var/pnp4nagios/perfdata/3Par1/Vol_Status_-_G9WIN1_TS_C1AO_GG01_serviceTimeMS_total_max.rrd )
+
 */
 
-//throw new Kohana_exception(print_r($MAX, TRUE));
+//throw new Kohana_exception(print_r($NAME, TRUE));
 
 if ( isset($RRD['Compaction'])) {
     $defIdx = 5;
     $optIdx = 5;
-    $i = 4;
+
+    $i = array_search("Compaction", $NAME);
 
     $ii = $i % 8;
     $name = $NAME[$i];
@@ -242,9 +246,9 @@ if ( isset($RRD['IO_read']) && isset($RRD['IO_write']) && isset($RRD['IO_total']
     $defIdx = 6;
     $optIdx++;
 
-    $i_pos = 5;
-    $i_neg = 6;
-    $i_tot = 7;
+    $i_pos = array_search("IO_read", $NAME);
+    $i_neg = array_search("IO_write", $NAME);
+    $i_tot = array_search("IO_total", $NAME);
     
     $ii_pos = $i_pos % 8;
     $ii_neg = $i_neg % 8;
@@ -278,13 +282,13 @@ if ( isset($RRD['IO_read']) && isset($RRD['IO_write']) && isset($RRD['IO_total']
     $def[$defIdx] .= "GPRINT:cnt_tot:AVERAGE:\"%10.2lf\l\" ";
 }
 
-if ( isset($RRD['serviceTimeMS_read_max']) && isset($RRD['serviceTimeMS_write_max']) ) {
+if ( isset($RRD['serviceTimeMS_read_max']) && isset($RRD['serviceTimeMS_write_max']) && isset($RRD['serviceTimeMS_total_max']) ) {
     $defIdx = 7;
     $optIdx++;
 
-    $i_pos = 8;
-    $i_neg = 9;
-    $i_tot = 10;
+    $i_pos = array_search("serviceTimeMS_read_max", $NAME);
+    $i_neg = array_search("serviceTimeMS_write_max", $NAME);
+    $i_tot = array_search("serviceTimeMS_total_max", $NAME);
     
     $ii_pos = $i_pos % 8;
     $ii_neg = $i_neg % 8;

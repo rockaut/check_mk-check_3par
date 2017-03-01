@@ -62,7 +62,7 @@ register_check_parameters(
               )
             ),
         ],
-        hidden_keys = ["flex_levels", "trend_perfdata", "trend_showtimeleft", "trend_timeleft", "trend_perc", "trend_mb", "trend_range", "magic", "magic_normsize", "levels_low", "inodes_levels" ]
+        hidden_keys = ["flex_levels", "magic", "magic_normsize", "levels_low", "inodes_levels" ] #"trend_perfdata", "trend_showtimeleft", "trend_timeleft", "trend_perc", "trend_mb", "trend_range",
     ),
     TextAscii(
         title = _("Name of the Volume"),
