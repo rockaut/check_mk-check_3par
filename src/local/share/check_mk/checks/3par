@@ -376,6 +376,7 @@ def check_3par_hosts(item, params, parsed):
                     infotext += " - max %s ms (!)" % ( serviceTimeMS_total_max )
                 else:
                     state = max( state, 0 )
+                    infotext += " - max %s ms" % ( serviceTimeMS_total_max )
 
                 perfdata.append( ( "serviceTimeMS_total_max", serviceTimeMS_total_max, params["serviceTimeMSLevels"][0], params["serviceTimeMSLevels"][1] ) )
                 perfdata.append( ( "IO_total_sum", IO_total_sum ) )
