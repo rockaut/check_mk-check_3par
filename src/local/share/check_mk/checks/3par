@@ -169,45 +169,6 @@ def check_3par_systemtotalcap(item, params, parsed):
     avail_mb = size_mb -used_mb
     state, infotext, perfdata = df_check_filesystem_single("3Par", "totalCapacity", size_mb, avail_mb, None, None, params)
 
-    #used_perc = 100.0 * (float(used_mb) / size_mb)
-    #size_gb   = size_mb / 1024.0
-    #used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
-    #size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
-
-    # If both numbers end with both MB or GB or TB, then drop the first one
-    #if used_hr[-2:] == size_hr[-2:]:
-    #    used_hr = used_hr[:-3]
-
-    #levels = get_filesystem_levels("bla", "volume", size_gb, params)
-    #warn_mb, crit_mb       = levels["levels_mb"]
-
-    #if warn_mb <= -1:
-    #    #Negativ levels, so calculate mb left
-    #    rest_mb = size_mb - used_mb
-    #    crit_mb = crit_mb * -1
-    #    warn_mb = warn_mb * -1
-    #    if rest_mb <= crit_mb:
-    #        state = 2
-    #    elif rest_mb <= warn_mb:
-    #        state = max(1, state)
-    #    else:
-    #        state = 0
-    #else:
-    #    if used_mb >= crit_mb:
-    #        state = 2
-    #    elif used_mb >= warn_mb:
-    #        state = max(1, state)
-    #    else:
-    #        state = 0
-
-    #infotext = "{:.0f}% used ({:.1f} of {:.1f} GB),(levels at {:.2f}/{:.2f}%)".format( used_perc, used_hr, size_hr, params["levels"][0], params["levels"][1] )
-    #if used_perc > 0:
-    #    perc_precision = max(1, 2 - int(round(math.log(used_perc, 10))))
-    #else:
-    #    perc_precision = 1
-    
-    #infotext += "%%.%df%%%% used (%%s of %%s), %%s" % perc_precision % (used_perc, used_hr, size_hr, levels["levels_text"])
-
     return ( state, infotext, perfdata )
 
 check_info["3par.SystemTotalCapacity"] = {
@@ -239,55 +200,8 @@ def check_3par_systemfailedcap(item, params, parsed):
 
     used_mb = systemInfos["failedCapacityMiB"] * 1.048576
     size_mb = systemInfos["totalCapacityMiB"] * 1.048576
-    used_perc = 100.0 * (float(used_mb) / size_mb)
-    size_gb   = size_mb / 1024.0
-    used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
-    size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
-
-    # If both numbers end with both MB or GB or TB, then drop the first one
-    if used_hr[-2:] == size_hr[-2:]:
-        used_hr = used_hr[:-3]
-
-    levels = get_filesystem_levels("bla", "volume", size_gb, params)
-    warn_mb, crit_mb       = levels["levels_mb"]
-
-    #print used_hr
-    #print used_mb
-    #print warn_mb
-    #print crit_mb
-
-    #3.66
-    #3838627.0208
-    #3660.0
-    #4000.0
-
-    if warn_mb <= -1:
-        #Negativ levels, so calculate mb left
-        rest_mb = size_mb - used_mb
-        crit_mb = crit_mb * -1
-        warn_mb = warn_mb * -1
-        if rest_mb <= crit_mb:
-            state = 2
-        elif rest_mb <= warn_mb:
-            state = max(1, state)
-        else:
-            state = 0
-    else:
-        if used_mb >= crit_mb:
-            state = 2
-        elif used_mb >= warn_mb:
-            state = max(1, state)
-        else:
-            state = 0
-
-    if used_perc > 0:
-        perc_precision = max(1, 2 - int(round(math.log(used_perc, 10))))
-    else:
-        perc_precision = 1
-    
-    infotext += "%%.%df%%%% used (%%s of %%s), %%s" % perc_precision % (used_perc, used_hr, size_hr, levels["levels_text"])
-    
-    perfdata.append( ( "failedCapacityMiB", systemInfos["failedCapacityMiB"], params["levels"][0], params["levels"][1], 0, systemInfos["totalCapacityMiB"] ) )
+    avail_mb = size_mb -used_mb
+    state, infotext, perfdata = df_check_filesystem_single("3Par", "failedCapacity", size_mb, avail_mb, None, None, params)
 
     return ( state, infotext, perfdata )
 
