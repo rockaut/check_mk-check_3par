@@ -66,6 +66,52 @@ factory_settings["threepar_ports_default_levels"] = {
     "failoverState-7" : 1,
 }
 
+threepar_degraded_stateIds = {
+    1: "SA_LIMIT_REACHED", # Administrative space is at limit.
+    2: "SD_LIMIT_REACHED", # Copy space is at limit.
+    3: "SA_GROW_FAILED", # Administrative space grow failed.
+    4: "SD_GROW_FAILED", # Copy space grow failed.
+    5: "SA_WARN_REACHED", # Administrative space is at warning level.
+    6: "SD_WARN_REACHED", # Copy space at warning level.
+    7: "INVALID", # Invalid
+}
+threepar_degraded_stateDescriptions = {
+    1: "Administrative space is at limit",
+    2: "Copy space is at limit",
+    3: "Administrative space grow failed",
+    4: "Copy space grow failed",
+    5: "Administrative space is at warning level",
+    6: "Copy space at warning level",
+    7: "Invalid",
+}
+
+def get_3par_degradedStates( states ):
+    if len(states) <= 0:
+        return ""
+
+    desc = ""
+
+    for id in states:
+        desc += "%s\\n" % get_3par_stateDescription( id )
+
+    return desc
+
+def get_3par_stateIds( id ):
+    desc = "UNKNOWN"
+
+    if id in threepar_degraded_stateIds:
+        return threepar_degraded_stateIds[id]
+
+    return desc
+
+def get_3par_stateDescription( id ):
+    desc = "Unknown"
+
+    if id in threepar_degraded_stateIds:
+        return threepar_degraded_stateDescriptions[id]
+
+    return desc
+
 ################################################################################
 #   _____                                      
 #  / ____|                                     
@@ -406,22 +452,25 @@ def check_3par_cpgs(item, params, parsed):
 
             if cpg["state"] >= levels["cpgstatus_critical"]:
                 state = max(2, state)
+
             elif cpg["state"] >= levels["cpgstatus_warning"]:
                 state = max(1, state)
             else:
                 state = max(0, state)
 
             if cpg["state"] >= 3:
-                stateWord = "FAILED"
+                stateWord = "FAILED (!!)"
             elif cpg["state"] >= 2:
-                stateWord = "DEGRADED"
+                stateWord = "DEGRADED (!)"
             elif cpg["state"] == 1:
                 stateWord = "NORMAL"
             else:
                 stateWord = "UNKNOWN"
 
-            infotext = "%s - %s VVs" % ( stateWord, totalVVs )
+            stateInfo = get_3par_degradedStates(cpg["degradedStates"])
 
+            infotext  = "%s - %s VVs" % ( stateWord, totalVVs )
+            
             if used_perc > 0:
                 perc_precision = max(1, 2 - int(round(math.log(used_perc, 10))))
             else:
@@ -432,6 +481,9 @@ def check_3par_cpgs(item, params, parsed):
 
             if state < 0:
                 state = 3
+
+            if stateInfo != "":
+                infotext += "\\nDegraded (!):\\n%s" %( stateInfo )
 
             return ( state, infotext, perfdata )
 
