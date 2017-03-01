@@ -1053,6 +1053,7 @@ factory_settings["hp3par_physicaldisks_default_levels"] = {
     "serviceTimeMSLevels_SSD": ( 10, 15 ),
     "serviceTimeMSLevels_FC": ( 35, 45 ),
     "serviceTimeMSLevels_NL": ( 75, 100 ),
+    "useMaxValues": False,
 }
 
 hp3par_pdType = {
@@ -1239,33 +1240,62 @@ def check_3par_physicaldisks(item, params, parsed):
         queueLength_avg = queueLength_sum / pd_count
         serviceTimeMS_total_avg = serviceTimeMS_total_sum / pd_count
 
-        if busyPct_max >= params["busyPctLevels"][1]:
-            state = max( state, 2 )
-            infotext += " - max. %s%% busy (!!)" % ( busyPct_max )
-        elif busyPct_max >= params["busyPctLevels"][0]:
-            state = max( state, 1 )
-            infotext += " - max. %s%% busy (!)" % ( busyPct_max )
-        else:
-            state = max( state, 0 )
+        if params["useMaxValues"] == True:
+            if busyPct_max >= params["busyPctLevels"][1]:
+                state = max( state, 2 )
+                infotext += " - max. %s%% busy (!!)" % ( busyPct_max )
+            elif busyPct_max >= params["busyPctLevels"][0]:
+                state = max( state, 1 )
+                infotext += " - max. %s%% busy (!)" % ( busyPct_max )
+            else:
+                state = max( state, 0 )
 
-        if queueLength_max >= params["queueLengthLevels"][1]:
-            state = max( state, 2 )
-            infotext += " - max. %s Queue (!!)" % ( queueLength_max )
-        elif queueLength_max >= params["queueLengthLevels"][0]:
-            state = max( state, 1 )
-            infotext += " - max. %s Queue (!)" % ( queueLength_max )
-        else:
-            state = max( state, 0 )
+            if queueLength_max >= params["queueLengthLevels"][1]:
+                state = max( state, 2 )
+                infotext += " - max. %s Queue (!!)" % ( queueLength_max )
+            elif queueLength_max >= params["queueLengthLevels"][0]:
+                state = max( state, 1 )
+                infotext += " - max. %s Queue (!)" % ( queueLength_max )
+            else:
+                state = max( state, 0 )
 
-        if serviceTimeMS_total_max >= params[stKey][1]:
-            state = max( state, 2 )
-            infotext += " - max. %0.0f ms (!!)(levels at %0.0f/%0.0f)" % ( serviceTimeMS_total_max, params[stKey][0], params[stKey][1] )
-        elif serviceTimeMS_total_max >= params[stKey][0]:
-            state = max( state, 1 )
-            infotext += " - max. %0.0f ms (!)(levels at %0.0f/%0.0f)" % ( serviceTimeMS_total_max, params[stKey][0], params[stKey][1] )
+            if serviceTimeMS_total_max >= params[stKey][1]:
+                state = max( state, 2 )
+                infotext += " - max. %0.0f ms (!!)(levels at %0.0f/%0.0f)" % ( serviceTimeMS_total_max, params[stKey][0], params[stKey][1] )
+            elif serviceTimeMS_total_max >= params[stKey][0]:
+                state = max( state, 1 )
+                infotext += " - max. %0.0f ms (!)(levels at %0.0f/%0.0f)" % ( serviceTimeMS_total_max, params[stKey][0], params[stKey][1] )
+            else:
+                state = max( state, 0 )
+                infotext += " - max. %0.0f ms ( Avg. %0.0f ms )" % ( serviceTimeMS_total_max, serviceTimeMS_total_avg )
         else:
-            state = max( state, 0 )
-            infotext += " - max. %0.0f ms ( Avg. %0.0f ms )" % ( serviceTimeMS_total_max, serviceTimeMS_total_avg )
+            if busyPct_avg >= params["busyPctLevels"][1]:
+                state = max( state, 2 )
+                infotext += " - avg. %s%% busy (!!)" % ( busyPct_avg )
+            elif busyPct_avg >= params["busyPctLevels"][0]:
+                state = max( state, 1 )
+                infotext += " - avg. %s%% busy (!)" % ( busyPct_avg )
+            else:
+                state = max( state, 0 )
+
+            if queueLength_avg >= params["queueLengthLevels"][1]:
+                state = max( state, 2 )
+                infotext += " - avg. %s Queue (!!)" % ( queueLength_avg )
+            elif queueLength_avg >= params["queueLengthLevels"][0]:
+                state = max( state, 1 )
+                infotext += " - avg. %s Queue (!)" % ( queueLength_avg )
+            else:
+                state = max( state, 0 )
+
+            if serviceTimeMS_total_avg >= params[stKey][1]:
+                state = max( state, 2 )
+                infotext += " - avg. %0.0f ms (!!)(levels at %0.0f/%0.0f)" % ( serviceTimeMS_total_avg, params[stKey][0], params[stKey][1] )
+            elif serviceTimeMS_total_avg >= params[stKey][0]:
+                state = max( state, 1 )
+                infotext += " - avg. %0.0f ms (!)(levels at %0.0f/%0.0f)" % ( serviceTimeMS_total_avg, params[stKey][0], params[stKey][1] )
+            else:
+                state = max( state, 0 )
+                infotext += " - avg. %0.0f ms ( max. %0.0f ms )" % ( serviceTimeMS_total_avg, serviceTimeMS_total_max )
 
         perfdata.append( ( "busyPct_min", busyPct_min, 0, 0, 0, 100 ) )
         perfdata.append( ( "busyPct_max", busyPct_max, params["busyPctLevels"][0], params["busyPctLevels"][1], 0, 100 ) )
