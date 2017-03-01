@@ -455,13 +455,11 @@ def check_3par_cpgs(item, params, parsed):
                 size_gb   = size_mb / 1024.0
                 used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
                 size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
-                cstate = cpg["state"] - 1
             else:
                 used_perc   = 0
                 size_gb     = 0
                 used_hr     = "0 MB"
                 size_hr     = "0 MB"
-                cstate      = cpg["state"] - 1
 
             # If both numbers end with both MB or GB or TB, then drop the first one
             if used_hr[-2:] == size_hr[-2:]:
@@ -490,9 +488,9 @@ def check_3par_cpgs(item, params, parsed):
                     else:
                         state = max(0, state)
 
-            if cstate >= levels["cpgstatus_critical"]:
+            if cpg["state"] >= levels["cpgstatus_critical"]:
                 state = max(2, state)
-            elif cstate >= levels["cpgstatus_warning"]:
+            elif cpg["state"] >= levels["cpgstatus_warning"]:
                 state = max(1, state)
             else:
                 state = max(0, state)
@@ -668,52 +666,10 @@ def check_3par_vols(item, params, parsed):
             used_mb = vol["userSpace"]["usedMiB"] * 1.048576
             size_mb = vol["sizeMiB"] * 1.048576
             avail_mb = size_mb -used_mb
-            cstate = vol["state"] - 1
             warn_grade = params["compaction_grade"][0]
             crit_grade = params["compaction_grade"][1]
 
-            #if "Placeholder_" in item:
             state, infotext, perfdata = df_check_filesystem_single("3Par", "volume", size_mb, avail_mb, None, None, params)
-                #return ( state, infotext, perfdata )
-            #else:
-            #    used_perc = 100.0 * (float(used_mb) / size_mb)
-            #    size_gb   = size_mb / 1024.0
-            #    used_hr = get_bytes_human_readable(used_mb * 1024 * 1024)
-            #    size_hr = get_bytes_human_readable(size_mb * 1024 * 1024)
-
-                # If both numbers end with both MB or GB or TB, then drop the first one
-            #    if used_hr[-2:] == size_hr[-2:]:
-            #        used_hr = used_hr[:-3]
-
-            #    levels = get_filesystem_levels("bla", "volume", size_gb, params)
-            #    warn_mb, crit_mb       = levels["levels_mb"]
-                
-            #    if warn_mb <= -1:
-            #        #Negativ levels, so calculate mb left
-            #        rest_mb = size_mb - used_mb
-            #        crit_mb = crit_mb * -1
-            #        warn_mb = warn_mb * -1
-            #        if rest_mb <= crit_mb:
-            #            state = max(2, state)
-            #        elif rest_mb <= warn_mb:
-            #            state = max(1, state)
-            #        else:
-            #            state = max(0, state)
-            #    else:
-            #        if used_mb >= crit_mb:
-            #            state = max(2, state)
-            #        elif used_mb >= warn_mb:
-            #            state = max(1, state)
-            #        else:
-            #            state = max(0, state)
-
-            #    if used_perc > 0:
-            #        perc_precision = max(1, 2 - int(round(math.log(used_perc, 10))))
-            #    else:
-            #        perc_precision = 1
-            #    infotext += "%%.%df%%%% used (%%s of %%s), %%s" % perc_precision % (used_perc, used_hr, size_hr, levels["levels_text"])
-
-            #    perfdata.append( ( "UsrUsedMiB", vol["userSpace"]["usedMiB"], warn_mb, crit_mb, vol["sizeMiB"] ) )
 
             if vstate >= params["volstatus_critical"]:
                 state = max(2, state)
