@@ -1123,7 +1123,7 @@ def check_3par_physicaldisks(item, params, parsed):
             if pd["type"] != pd_type:
                 continue
 
-            if pd["spareChunklets"]["availClean"] <= 0:
+            if pd["spareChunklets"]["availClean"] <= 0 and pd["spareChunklets"]["usedOK"] <= 0:
                 pd_failed += 1
                 continue
 
