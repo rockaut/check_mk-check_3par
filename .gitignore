@@ -98,3 +98,5 @@ test.json
 src/local/share/check_mk/agents/special/agent_3parTest
 
 src/local/share/check_mk/checks/3par\.diff
+
+*.diff
