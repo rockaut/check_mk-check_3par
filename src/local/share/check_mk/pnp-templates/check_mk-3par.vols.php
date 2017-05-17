@@ -61,6 +61,7 @@ $critgb = $CRIT[1] / 1024.0;
 $warngbtxt = sprintf("%.1f", $warngb);
 $critgbtxt = sprintf("%.1f", $critgb);
 
+$ds_name[1] = "fs";
 $opt[1] = "--vertical-label GB -l 0 -u $maxgb --title '$hostname: Filesystem $fstitle ($sizegb GB)' ";
 
 # First graph show current filesystem usage
@@ -100,6 +101,8 @@ if (isset($RRD['growth'])) {
     $hours = 1.0 / ($size_mb_per_hours / $size_mb);
     $range = sprintf("%.0fh", $hours);
 
+    $ds_name[2] = "Growth";
+
     // Current growth / shrinking. This value is give as MB / 24 hours.
     // Note: This has changed in 1.1.13i3. Prior it was MB / trend_range!
     $opt[2] = "--vertical-label '+/- MB / 24h' -l -1 -u 1 -X0 --title '$hostname: Growth of $fstitle' ";
@@ -117,6 +120,7 @@ if (isset($RRD['growth'])) {
     $def[2] .= "GPRINT:growth:MAX:\"Max\: %+9.2lfMB / 24h\\n\" ";
 
     // Trend
+    $ds_name[3] = "Growth Trend";
     $opt[3] = "--vertical-label '+/- MB / 24h' -l -1 -u 1 -X0 --title '$hostname: Trend for $fstitle' ";
     $def[3] = "DEF:trend=${RRD_AVG['trend']} ";
     $def[3] .= "HRULE:0#c0c0c0 ";
@@ -135,6 +139,7 @@ if (isset($RRD['growth'])) {
 
 if (isset($RRD['trend_hoursleft'])) {
     // Trend
+    $ds_name[4] = "Time Left";
     $opt[4] = "--vertical-label 'Days left' -l -1 -u 365 -X0 --title '$hostname: Days left for $fstitle' ";
     $def[4] = "DEF:hours_left=${RRD_AVG['trend_hoursleft']} ";
     $def[4] .= "DEF:hours_left_min=${RRD_MIN['trend_hoursleft']} ";
@@ -214,6 +219,7 @@ if ( isset($RRD['Compaction'])) {
 
     $ii = $i % 8;
     $name = $NAME[$i];
+    $ds_name[$defIdx] = $name;
     $def[$defIdx] = "DEF:cnt=$RRDFILE[$i]:$DS[$i]:MAX ";
     $def[$defIdx] .= "AREA:cnt#$area_colors[$ii]:\"$name\" ";
     $def[$defIdx] .= "LINE1:cnt#$line_colors[$ii]: ";
@@ -258,6 +264,7 @@ if ( isset($RRD['IO_read']) && isset($RRD['IO_write']) && isset($RRD['IO_total']
     $name_neg = $NAME[$i_neg];
     $name_tot = $NAME[$i_tot];
 
+    $ds_name[$defIdx] = "IOs";
     $opt[$optIdx] = " --title '$hostname: IO/s Read/Write' ";
 
     $def[$defIdx]  = "DEF:cnt_pos=$RRDFILE[$i_pos]:$DS[1]:MAX ";
@@ -298,6 +305,7 @@ if ( isset($RRD['serviceTimeMS_read_max']) && isset($RRD['serviceTimeMS_write_ma
     $name_neg = $NAME[$i_neg];
     $name_tot = $NAME[$i_tot];
 
+    $ds_name[$defIdx] = "Service Times";
     $opt[$optIdx] = " --title '$hostname: Service Time Read/Write' ";
 
     $def[$defIdx]  = "DEF:cnt_pos=$RRDFILE[$i_pos]:$DS[1]:MAX ";
@@ -323,6 +331,43 @@ if ( isset($RRD['serviceTimeMS_read_max']) && isset($RRD['serviceTimeMS_write_ma
     $def[$defIdx] .= "GPRINT:cnt_tot:LAST:\"%10.2lf\" ";
     $def[$defIdx] .= "GPRINT:cnt_tot:MAX:\"%10.2lf\" ";
     $def[$defIdx] .= "GPRINT:cnt_tot:AVERAGE:\"%10.2lf\l\" ";
+}
+
+if ( isset($RRD['fs_size'])) {
+    $defIdx = 8;
+    $optIdx++;
+
+    $i = array_search("fs_size", $NAME);
+
+    $ii = $i % 8;
+    $name = $NAME[$i];
+    $ds_name[$defIdx] = $name;
+    $def[$defIdx] = "DEF:cnt=$RRDFILE[$i]:$DS[$i]:MAX ";
+    $def[$defIdx] .= "AREA:cnt#$area_colors[$ii]:\"$name\" ";
+    $def[$defIdx] .= "LINE1:cnt#$line_colors[$ii]: ";
+
+    $upper = "";
+    $lower = " -l 0";
+    if ($WARN[$i] != "") {
+    $def[$defIdx] .= "HRULE:$WARN[$i]#ffff00:\"Warning\" ";
+    }
+    if ($CRIT[$i] != "") {
+    $def[$defIdx] .= "HRULE:$CRIT[$i]#ff0000:\"Critical\" ";
+    }
+    if ($MIN[$i] != "") {
+    $lower = " -l " . $MIN[$i];
+    $minimum = $MIN[$i];
+    }
+    if ($MAX[$i] != "") {
+    $upper = " -u" . $MAX[$i];
+    $def[$defIdx] .= "HRULE:$MAX[$i]#0000b0:\"Upper limit\" ";
+    }
+
+    $opt[$optIdx] = "$lower $upper --title '$hostname: $servicedesc - $name' ";
+    $def[$defIdx] .= "GPRINT:cnt:LAST:\"current\: %6.2lf\" ";
+    $def[$defIdx] .= "GPRINT:cnt:MAX:\"max\: %6.2lf\" ";
+    $def[$defIdx] .= "GPRINT:cnt:AVERAGE:\"avg\: %6.2lf\" ";
+
 }
 
 ?>
