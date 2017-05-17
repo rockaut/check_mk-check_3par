@@ -61,6 +61,14 @@ register_check_parameters(
                   ]
               )
             ),
+            ("compaction_grade", Tuple(
+                title = _("Alert on compaction grade"),
+                elements = [
+                    Percentage(title = _("Warning at a value of"), default_value=0.5),
+                    Percentage(title = _("Critical at a value of"), default_value=0.2)
+                  ],
+                ),
+            )
         ],
         hidden_keys = ["flex_levels", "magic", "magic_normsize", "levels_low", "inodes_levels" ] #"trend_perfdata", "trend_showtimeleft", "trend_timeleft", "trend_perc", "trend_mb", "trend_range",
     ),
