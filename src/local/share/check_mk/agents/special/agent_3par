@@ -437,6 +437,8 @@ def main( argv ):
             pass
         else:
             result["sysrep_vlunstatistics"] = sysrep_vlunstatistics
+            
+        remove_cred( sessionHost, sessionKey )
 
         print json.dumps(result, sort_keys=True, indent=4, separators=(',', ': '))
         
