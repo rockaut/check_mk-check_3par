@@ -209,11 +209,12 @@ def check_3par_systemtotalcap(item, params, parsed):
     infotext = ""
 
     systemInfos = parsed["system"]
-
+    
     used_mb = systemInfos["allocatedCapacityMiB"] * 1.048576
     size_mb = systemInfos["totalCapacityMiB"] * 1.048576
     avail_mb = size_mb -used_mb
-    state, infotext, perfdata = df_check_filesystem_single("3Par", "totalCapacity", size_mb, avail_mb, None, None, params)
+    
+    state, infotext, perfdata = df_check_filesystem_single("3Par", "totalCapacity", size_mb, avail_mb, None, None, None, params)
 
     return ( state, infotext, perfdata )
 
@@ -247,7 +248,7 @@ def check_3par_systemfailedcap(item, params, parsed):
     used_mb = systemInfos["failedCapacityMiB"] * 1.048576
     size_mb = systemInfos["totalCapacityMiB"] * 1.048576
     avail_mb = size_mb -used_mb
-    state, infotext, perfdata = df_check_filesystem_single("3Par", "failedCapacity", size_mb, avail_mb, None, None, params)
+    state, infotext, perfdata = df_check_filesystem_single("3Par", "failedCapacity", size_mb, avail_mb, None, None, None, params)
 
     return ( state, infotext, perfdata )
 
@@ -637,7 +638,7 @@ def check_3par_vols(item, params, parsed):
             warn_grade = params["compaction_grade"][0]
             crit_grade = params["compaction_grade"][1]
 
-            state, infotext, perfdata = df_check_filesystem_single("3Par", "volume", size_mb, avail_mb, None, None, params)
+            state, infotext, perfdata = df_check_filesystem_single("3Par", "volume", size_mb, avail_mb, None, None, None, params)
 
             if vstate >= params["volstatus_critical"]:
                 state = max(2, state)
