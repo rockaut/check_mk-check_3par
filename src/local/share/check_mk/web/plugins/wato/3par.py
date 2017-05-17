@@ -23,6 +23,36 @@ register_check_parameters(
     "dict"
 )
 
+register_check_parameters(
+    subgroup_storage,
+    "3par_hosts",
+    _("3Par - Hosts"),
+    Dictionary(
+        elements = [
+            ("serviceTimeMSLevels", Tuple(
+                title = _("Alert on too high service time"),
+                elements = [
+                    Integer(title = _("Warning at a value of"), default_value=30.0),
+                    Integer(title = _("Critical at a value of"), default_value=50.0)
+                  ],
+                ),
+            ),
+            ("hostPortLevels", Tuple(
+                title = _("Alert on too less ports"),
+                elements = [
+                    Integer(title = _("Warning at a value of"), default_value=3),
+                    Integer(title = _("Critical at a value of"), default_value=2)
+                  ],
+                ),
+            )
+        ]
+    ),
+    TextAscii(
+        title = _("ID of the node"),
+    ),
+    "dict"
+)
+
 ##############################################
 #  __      __   _                           
 #  \ \    / /  | |                          
@@ -64,8 +94,8 @@ register_check_parameters(
             ("compaction_grade", Tuple(
                 title = _("Alert on compaction grade"),
                 elements = [
-                    Percentage(title = _("Warning at a value of"), default_value=0.5),
-                    Percentage(title = _("Critical at a value of"), default_value=0.2)
+                    Float(title = _("Warning at a value of"), default_value=0.5),
+                    Float(title = _("Critical at a value of"), default_value=0.2)
                   ],
                 ),
             )
