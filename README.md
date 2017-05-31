@@ -1,4 +1,4 @@
-> WORD OF CAUTION: currently heavy under development! Several breaking changes may occure without asuring backward compatibility.
+> Since Version 1.4.0 Check_MK is providing it's own 3Par agent - which is very simmilar to this one. Nonetheless they are incompatible. I'm currently deciding if i keep up the work for this agent.
 
 # Check_MK Agent for Graylog REST API
 
